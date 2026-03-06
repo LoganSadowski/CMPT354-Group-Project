@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Home</title>
+</head>
+<body>
+    <h1>Technicians</h1>
+    <div>
+        <ol>
+            {% for technician in technicians %}
+                <li>{{ technician.FirstName }} {{ technician.LastName }}</li>
+            {% endfor %}
+        </ol>
+    </div>
+</body>
+</html>
