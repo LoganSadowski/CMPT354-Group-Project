@@ -1,0 +1,83 @@
+CREATE TABLE Technician (
+	technicianID INT NOT NULL,
+	firstName VARCHAR(50),
+	lastName VARCHAR(50),
+	email VARCHAR(50),
+	phone VARCHAR(15),
+	depID INT NOT NULL,
+	PRIMARY KEY (technicianID),
+	FOREIGN KEY (depID) REFERENCES Department (departmentID)
+);
+
+CREATE TABLE Department (
+	departmentID INT NOT NULL,
+	name VARCHAR(50),
+	managerID INT NOT NULL,
+	PRIMARY KEY (departmentID),
+	FOREIGN KEY (managerID) REFERENCES Technician (technicianID)
+);
+
+CREATE TABLE Client (
+	clientID INT NOT NULL,
+	email VARCHAR(50),
+	PRIMARY KEY (clientID)
+);
+
+CREATE TABLE Company (
+	cID INT NOT NULL,
+	name VARCHAR(50),
+	PRIMARY KEY (cID),
+	FOREIGN KEY (cID) REFERENCES Client (clientID)
+);
+
+CREATE TABLE Individual (
+	cID INT NOT NULL,
+	firstName VARCHAR(50),
+	lastName VARCHAR(50),
+	PRIMARY KEY (cID),
+	FOREIGN KEY (cID) REFERENCES Client (clientID)
+);
+
+CREATE TABLE StorageLocation (
+	storageID INT NOT NULL,
+	address VARCHAR(50),
+	capacity INT,
+	PRIMARY KEY (storageID)
+);
+
+CREATE TABLE Sample (
+	sampleID INT NOT NULL,
+	description VARCHAR(300),
+	dateReceived VARCHAR(50),
+	cID INT NOT NULL,
+	sID INT,
+	PRIMARY KEY (sampleID),
+	FOREIGN KEY (cID) REFERENCES Client (clientID),
+	FOREIGN KEY (sID) REFERENCES StorageLocation (storageID)
+);
+
+CREATE TABLE SubSample (
+	subSampleID CHAR NOT NULL,
+	sampleID INT NOT NULL,
+	PRIMARY KEY (subSampleID, sampleID),
+	FOREIGN KEY (sampleID) REFERENCES Sample (sampleID)
+);
+
+CREATE TABLE ConductsTestOn (
+	tID INT NOT NULL,
+	sID INT NOT NULL,
+	time DATETIME,
+	instrument VARCHAR(50),
+	PRIMARY KEY(tID, sID),
+	FOREIGN KEY (tID) REFERENCES Technician (technicianID),
+	FOREIGN KEY (sID) REFERENCES StorageLocation (storageID)
+);
+
+CREATE TABLE TestResults (
+	tID INT NOT NULL,
+	sID INT NOT NULL,
+	results VARCHAR(100) NOT NULL,
+	PRIMARY KEY (tID, sID, results),
+	FOREIGN KEY (tID) REFERENCES ConductsTestOn (tID),
+	FOREIGN KEY (sID) REFERENCES ConductsTestOn (sID)
+);
