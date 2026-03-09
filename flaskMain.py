@@ -20,7 +20,7 @@ def home():
     conn.row_factory = dict_factory
 
     c = conn.cursor()
-    c.execute('SELECT * FROM Technicians')
+    c.execute('SELECT * FROM Technician')
     technicians = c.fetchall()
     return render_template('home.html', technicians=technicians)
 

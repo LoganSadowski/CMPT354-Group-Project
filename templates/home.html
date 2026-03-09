@@ -8,11 +8,11 @@
 <body>
     <h1>Technicians</h1>
     <div>
-        <ol>
+        <ul>
             {% for technician in technicians %}
-                <li>{{ technician.FirstName }} {{ technician.LastName }}</li>
+                <li>{{ technician.firstName }} {{ technician.lastName }}</li>
             {% endfor %}
-        </ol>
+        </ul>
     </div>
 </body>
 </html>

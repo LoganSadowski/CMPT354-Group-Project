@@ -81,3 +81,62 @@ CREATE TABLE TestResults (
 	FOREIGN KEY (tID) REFERENCES ConductsTestOn (tID),
 	FOREIGN KEY (sID) REFERENCES ConductsTestOn (sID)
 );
+
+INSERT INTO Client (clientID, email) VALUES
+(1, 'contact@biocorp.com'),
+(2, 'info@medilabs.com'),
+(3, 'john.doe@email.com'),
+(4, 'jane.smith@email.com'),
+(5, 'support@chemtech.com');
+
+INSERT INTO Company (cID, name) VALUES
+(1, 'BioCorp'),
+(2, 'MediLabs'),
+(5, 'ChemTech');
+
+INSERT INTO Individual (cID, firstName, lastName) VALUES
+(3, 'John', 'Doe'),
+(4, 'Jane', 'Smith');
+
+INSERT INTO StorageLocation (storageID, address, capacity) VALUES
+(101, 'Room A - Freezer 1', 200),
+(102, 'Room A - Freezer 2', 150),
+(103, 'Room B - Shelf 3', 100),
+(104, 'Cold Storage Unit 1', 300);
+
+INSERT INTO Technician (technicianID, firstName, lastName, email, phone, depID) VALUES
+(1, 'Alice', 'Brown', 'alice.brown@lab.com', '6041112222', 10),
+(2, 'Bob', 'Miller', 'bob.miller@lab.com', '6041113333', 20),
+(3, 'Clara', 'Wilson', 'clara.wilson@lab.com', '6041114444', 10),
+(4, 'David', 'Lee', 'david.lee@lab.com', '6041115555', 30);
+
+INSERT INTO Department (departmentID, name, managerID) VALUES
+(10, 'Microbiology', 1),
+(20, 'Chemistry', 2),
+(30, 'Genetics', 4);
+
+INSERT INTO Sample (sampleID, description, dateReceived, cID, sID) VALUES
+(1001, 'Water contamination sample', '2026-01-10', 1, 101),
+(1002, 'Blood test sample', '2026-01-11', 3, 102),
+(1003, 'Soil chemical analysis', '2026-01-12', 2, 103),
+(1004, 'Plant DNA sample', '2026-01-13', 4, 104);
+
+INSERT INTO SubSample (subSampleID, sampleID) VALUES
+('A', 1001),
+('B', 1001),
+('A', 1002),
+('B', 1002),
+('A', 1003),
+('A', 1004);
+
+INSERT INTO ConductsTestOn (tID, sID, time, instrument) VALUES
+(1, 101, '2026-02-01 09:30:00', 'Spectrometer'),
+(2, 102, '2026-02-01 10:15:00', 'Chromatograph'),
+(3, 103, '2026-02-01 11:00:00', 'Microscope'),
+(4, 104, '2026-02-01 11:45:00', 'DNA Sequencer');
+
+INSERT INTO TestResults (tID, sID, results) VALUES
+(1, 101, 'High bacterial concentration'),
+(2, 102, 'Normal blood chemistry'),
+(3, 103, 'Elevated nitrate levels'),
+(4, 104, 'DNA sequence successfully extracted');
