@@ -3,16 +3,254 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Home</title>
+    <title>Lab Query Viewer</title>
+    <style>
+        :root {
+            color-scheme: light;
+            font-family: Arial, Helvetica, sans-serif;
+        }
+
+        body {
+            margin: 0;
+            background: #f4f7fb;
+            color: #1f2937;
+        }
+
+        .page {
+            max-width: 1000px;
+            margin: 40px auto;
+            padding: 0 20px;
+        }
+
+        .card {
+            background: #ffffff;
+            border-radius: 14px;
+            padding: 24px;
+            box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+            margin-bottom: 20px;
+        }
+
+        h1, h2 {
+            margin-top: 0;
+        }
+
+        p {
+            color: #4b5563;
+        }
+
+        textarea {
+            width: 100%;
+            min-height: 120px;
+            padding: 14px;
+            border: 1px solid #cbd5e1;
+            border-radius: 10px;
+            font-size: 15px;
+            resize: vertical;
+            box-sizing: border-box;
+        }
+
+        .button-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 10px;
+            margin-top: 16px;
+        }
+
+        .link-btn {
+            display: inline-block;
+            text-align: center;
+            text-decoration: none;
+            background: #2563eb;
+            color: white;
+            border-radius: 10px;
+            padding: 12px 18px;
+            font-size: 15px;
+        }
+
+        .link-btn:hover {
+            background: #1d4ed8;
+        }
+
+        .link-btn.active {
+            background: #1e40af;
+        }
+
+        button {
+            background: #2563eb;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            padding: 12px 18px;
+            font-size: 15px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #1d4ed8;
+        }
+
+        button.active {
+            background: #1e40af;
+        }
+
+        .hint {
+            margin-top: 10px;
+            font-size: 14px;
+            color: #6b7280;
+        }
+
+        .error {
+            background: #fee2e2;
+            color: #991b1b;
+            padding: 12px 14px;
+            border-radius: 10px;
+            margin-bottom: 16px;
+        }
+
+        .success {
+            margin-bottom: 16px;
+            font-size: 14px;
+            color: #374151;
+        }
+
+        .add-form {
+            margin-top: 18px;
+            padding-top: 18px;
+            border-top: 1px solid #e5e7eb;
+        }
+
+        .delete-form {
+            margin-top: 18px;
+            padding-top: 18px;
+            border-top: 1px solid #e5e7eb;
+        }
+
+        .field-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #cbd5e1;
+            border-radius: 10px;
+            box-sizing: border-box;
+            font-size: 14px;
+        }
+
+        .table-wrap {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 600px;
+        }
+
+        th, td {
+            text-align: left;
+            padding: 12px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        th {
+            background: #eff6ff;
+            color: #1e3a8a;
+        }
+
+        .empty {
+            padding: 18px;
+            background: #f8fafc;
+            border-radius: 10px;
+            color: #475569;
+        }
+    </style>
 </head>
 <body>
-    <h1>Technicians</h1>
-    <div>
-        <ul>
-            {% for technician in technicians %}
-                <li>{{ technician.firstName }} {{ technician.lastName }}</li>
-            {% endfor %}
-        </ul>
+    <div class="page">
+        <div class="card">
+            <h1>Lab Database Query Viewer</h1>
+            <div class="button-grid">
+                {% for table_key, label in table_labels.items() %}
+                    <a
+                        href="/{{ table_key }}"
+                        class="link-btn {% if selected_table == table_key %}active{% endif %}"
+                    >
+                        {{ label }}
+                    </a>
+                {% endfor %}
+            </div>
+            <div class="hint">Current page: <strong>{{ selected_label }}</strong></div>
+
+            <form method="post" class="add-form">
+                <input type="hidden" name="action" value="add">
+                <strong>Add to {{ selected_label }}</strong>
+                <div class="field-grid">
+                    {% for field in table_fields %}
+                        <div>
+                            <label for="add_{{ field }}">{{ field }}</label>
+                            <input id="add_{{ field }}" name="{{ field }}" type="text" {% if selected_table == 'sample' and field == 'sID' %}{% else %}required{% endif %}>
+                        </div>
+                    {% endfor %}
+                </div>
+                <button type="submit" style="margin-top: 12px;">Add Record</button>
+            </form>
+
+            <form method="post" class="delete-form">
+                <input type="hidden" name="action" value="delete">
+                <strong>Remove from {{ selected_label }}</strong>
+                <div class="field-grid">
+                    {% for field in delete_fields %}
+                        <div>
+                            <label for="delete_{{ field }}">{{ field }}</label>
+                            <input id="delete_{{ field }}" name="{{ field }}" type="text" required>
+                        </div>
+                    {% endfor %}
+                </div>
+                <button type="submit" style="margin-top: 12px;">Remove Record</button>
+            </form>
+        </div>
+
+        <div class="card">
+            <h2>Results</h2>
+
+            {% if error %}
+                <div class="error">{{ error }}</div>
+            {% elif action_message %}
+                <div class="success">{{ action_message }}</div>
+            {% else %}
+                <div class="success">{{ results|length }} row(s) returned.</div>
+            {% endif %}
+
+            {% if columns and results %}
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                {% for column in columns %}
+                                    <th>{{ column }}</th>
+                                {% endfor %}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for row in results %}
+                                <tr>
+                                    {% for column in columns %}
+                                        <td>{{ row[column] }}</td>
+                                    {% endfor %}
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% elif not error %}
+                <div class="empty">No data matched this query.</div>
+            {% endif %}
+        </div>
     </div>
 </body>
 </html>

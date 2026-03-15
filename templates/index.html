@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lab Categories</title>
+    <style>
+        :root {
+            color-scheme: light;
+            font-family: Arial, Helvetica, sans-serif;
+        }
+
+        body {
+            margin: 0;
+            background: #f4f7fb;
+            color: #1f2937;
+        }
+
+        .page {
+            max-width: 900px;
+            margin: 40px auto;
+            padding: 0 20px;
+        }
+
+        .card {
+            background: #ffffff;
+            border-radius: 14px;
+            padding: 24px;
+            box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 10px;
+            margin-top: 16px;
+        }
+
+        .link-btn {
+            display: inline-block;
+            text-align: center;
+            text-decoration: none;
+            background: #2563eb;
+            color: white;
+            border-radius: 10px;
+            padding: 12px 18px;
+            font-size: 15px;
+        }
+
+        .link-btn:hover {
+            background: #1d4ed8;
+        }
+    </style>
+</head>
+<body>
+    <div class="page">
+        <div class="card">
+            <h1>Lab Database Categories</h1>
+            <p>Open a category page to retrieve, add, or remove records.</p>
+            <div class="grid">
+                {% for table_key, label in table_labels.items() %}
+                    <a class="link-btn" href="/{{ table_key }}">{{ label }}</a>
+                {% endfor %}
+            </div>
+            <p style="margin-top: 16px;">Default page: <a href="/{{ default_table }}">{{ table_labels[default_table] }}</a></p>
+        </div>
+    </div>
+</body>
+</html>
