@@ -233,6 +233,17 @@ def table_page(table_key):
         action_message=action_message,
     )
 
+@app.route("/samples")
+def samples():
+    conn = sqlite3.connect('samples.db')
+    conn.row_factory = dict_factory
+
+    c = conn.cursor()
+    c.execute('SELECT S.description, S.dateReceived, L.address FROM Sample AS S, StorageLocation AS L WHERE S.sID = L.storageID')
+    samples = c.fetchall()
+    return render_template('samples.html', samples=samples)
+
 #enable debugging
 if __name__ == '__main__':
     app.run(debug=True)   
+

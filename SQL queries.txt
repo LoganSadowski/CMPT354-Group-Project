@@ -6,7 +6,8 @@ CREATE TABLE Technician (
 	phone VARCHAR(15),
 	depID INT NOT NULL,
 	PRIMARY KEY (technicianID),
-	FOREIGN KEY (depID) REFERENCES Department (departmentID)
+	FOREIGN KEY (depID) REFERENCES Department (departmentID),
+	CONSTRAINT uniqueDep UNIQUE (technicianID, depID)
 );
 
 CREATE TABLE Department (
@@ -14,7 +15,7 @@ CREATE TABLE Department (
 	name VARCHAR(50),
 	managerID INT NOT NULL,
 	PRIMARY KEY (departmentID),
-	FOREIGN KEY (managerID) REFERENCES Technician (technicianID)
+	FOREIGN KEY (managerID, departmentID) REFERENCES Technician (technicianID, depID)
 );
 
 CREATE TABLE Client (
@@ -85,41 +86,62 @@ CREATE TABLE TestResults (
 INSERT INTO Client (clientID, email) VALUES
 (1, 'contact@biocorp.com'),
 (2, 'info@medilabs.com'),
-(3, 'john.doe@email.com'),
-(4, 'jane.smith@email.com'),
-(5, 'support@chemtech.com');
+(3, 'support@chemtech.com'),
+(4, 'contact@envirolab.com'),
+(5, 'info@nanotech.com'),
+(6, 'john.doe@email.com'),
+(7, 'jane.smith@email.com'),
+(8, 'sarah.connor@email.com'),
+(9, 'michael.reed@email.com'),
+(10, 'laura.nguyen@email.com');
 
 INSERT INTO Company (cID, name) VALUES
 (1, 'BioCorp'),
 (2, 'MediLabs'),
-(5, 'ChemTech');
+(3, 'ChemTech'),
+(4, 'EnviroLab'),
+(5, 'NanoTech');
 
 INSERT INTO Individual (cID, firstName, lastName) VALUES
-(3, 'John', 'Doe'),
-(4, 'Jane', 'Smith');
+(6, 'John', 'Doe'),
+(7, 'Jane', 'Smith'),
+(8, 'Sarah', 'Connor'),
+(9, 'Michael', 'Reed'),
+(10, 'Laura', 'Nguyen');
 
 INSERT INTO StorageLocation (storageID, address, capacity) VALUES
-(101, 'Room A - Freezer 1', 200),
-(102, 'Room A - Freezer 2', 150),
-(103, 'Room B - Shelf 3', 100),
-(104, 'Cold Storage Unit 1', 300);
+(101, 'Freezer A1', 200),
+(102, 'Freezer A2', 150),
+(103, 'Shelf B1', 100),
+(104, 'Cold Room C1', 300),
+(105, 'Storage D1', 120);
 
 INSERT INTO Technician (technicianID, firstName, lastName, email, phone, depID) VALUES
-(1, 'Alice', 'Brown', 'alice.brown@lab.com', '6041112222', 10),
-(2, 'Bob', 'Miller', 'bob.miller@lab.com', '6041113333', 20),
-(3, 'Clara', 'Wilson', 'clara.wilson@lab.com', '6041114444', 10),
-(4, 'David', 'Lee', 'david.lee@lab.com', '6041115555', 30);
+(1, 'Alice', 'Brown', 'alice@lab.com', '6041111111', 10),
+(2, 'Bob', 'Miller', 'bob@lab.com', '6041111112', 20),
+(3, 'Clara', 'Wilson', 'clara@lab.com', '6041111113', 30),
+(4, 'David', 'Lee', 'david@lab.com', '6041111114', 40),
+(5, 'Ethan', 'Moore', 'ethan@lab.com', '6041111115', 50),
+(6, 'Fiona', 'Clark', 'fiona@lab.com', '6041111116', 10),
+(7, 'George', 'Hall', 'george@lab.com', '6041111117', 20),
+(8, 'Hannah', 'Young', 'hannah@lab.com', '6041111118', 30);
 
 INSERT INTO Department (departmentID, name, managerID) VALUES
 (10, 'Microbiology', 1),
 (20, 'Chemistry', 2),
-(30, 'Genetics', 4);
+(30, 'Genetics', 3),
+(40, 'Toxicology', 4),
+(50, 'Environmental', 5);
 
 INSERT INTO Sample (sampleID, description, dateReceived, cID, sID) VALUES
 (1001, 'Water contamination sample', '2026-01-10', 1, 101),
-(1002, 'Blood test sample', '2026-01-11', 3, 102),
+(1002, 'Blood test sample', '2026-01-11', 6, 102),
 (1003, 'Soil chemical analysis', '2026-01-12', 2, 103),
-(1004, 'Plant DNA sample', '2026-01-13', 4, 104);
+(1004, 'Plant DNA sample', '2026-01-13', 7, 104),
+(1005, 'Air quality sample', '2026-01-14', 3, 105),
+(1006, 'River sediment sample', '2026-01-15', 8, 101),
+(1007, 'Industrial waste sample', '2026-01-16', 4, 102),
+(1008, 'Bacterial culture sample', '2026-01-17', 9, 103);
 
 INSERT INTO SubSample (subSampleID, sampleID) VALUES
 ('A', 1001),
@@ -127,16 +149,28 @@ INSERT INTO SubSample (subSampleID, sampleID) VALUES
 ('A', 1002),
 ('B', 1002),
 ('A', 1003),
-('A', 1004);
+('A', 1004),
+('A', 1005),
+('A', 1006),
+('A', 1007),
+('A', 1008);
 
 INSERT INTO ConductsTestOn (tID, sID, time, instrument) VALUES
-(1, 101, '2026-02-01 09:30:00', 'Spectrometer'),
-(2, 102, '2026-02-01 10:15:00', 'Chromatograph'),
+(1, 101, '2026-02-01 09:00:00', 'Spectrometer'),
+(2, 102, '2026-02-01 10:00:00', 'Chromatograph'),
 (3, 103, '2026-02-01 11:00:00', 'Microscope'),
-(4, 104, '2026-02-01 11:45:00', 'DNA Sequencer');
+(4, 104, '2026-02-01 12:00:00', 'DNA Sequencer'),
+(5, 105, '2026-02-01 13:00:00', 'Mass Spectrometer'),
+(6, 101, '2026-02-02 09:30:00', 'Gas Chromatograph'),
+(7, 103, '2026-02-02 10:30:00', 'Electron Microscope'),
+(8, 105, '2026-02-02 11:30:00', 'Particle Analyzer');
 
 INSERT INTO TestResults (tID, sID, results) VALUES
-(1, 101, 'High bacterial concentration'),
-(2, 102, 'Normal blood chemistry'),
-(3, 103, 'Elevated nitrate levels'),
-(4, 104, 'DNA sequence successfully extracted');
+(1, 101, 'High bacterial count'),
+(2, 102, 'Normal chemistry levels'),
+(3, 103, 'High nitrate concentration'),
+(4, 104, 'DNA successfully sequenced'),
+(5, 105, 'Elevated CO2 detected'),
+(6, 101, 'Trace hydrocarbons detected'),
+(7, 103, 'Microbial colonies present'),
+(8, 105, 'Particulate levels within safe limits');

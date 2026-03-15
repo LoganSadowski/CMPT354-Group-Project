@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Home</title>
+</head>
+<body>
+    <h1>Samples</h1>
+    <div>
+        <ul>
+            {% for sample in samples %}
+                <li>{{ sample.description }}, {{ sample.dateReceived }}, {{ sample.address }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+</body>
+</html>
