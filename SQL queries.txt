@@ -66,21 +66,21 @@ CREATE TABLE SubSample (
 
 CREATE TABLE ConductsTestOn (
 	tID INT NOT NULL,
-	sID INT NOT NULL,
+	sampleID INT NOT NULL,
 	time DATETIME,
 	instrument VARCHAR(50),
-	PRIMARY KEY(tID, sID),
+	PRIMARY KEY(tID, sampleID),
 	FOREIGN KEY (tID) REFERENCES Technician (technicianID),
-	FOREIGN KEY (sID) REFERENCES StorageLocation (storageID)
+	FOREIGN KEY (sampleID) REFERENCES Sample (sampleID)
 );
 
 CREATE TABLE TestResults (
 	tID INT NOT NULL,
-	sID INT NOT NULL,
+	sampleID INT NOT NULL,
 	results VARCHAR(100) NOT NULL,
-	PRIMARY KEY (tID, sID, results),
+	PRIMARY KEY (tID, sampleID, results),
 	FOREIGN KEY (tID) REFERENCES ConductsTestOn (tID),
-	FOREIGN KEY (sID) REFERENCES ConductsTestOn (sID)
+	FOREIGN KEY (sampleID) REFERENCES ConductsTestOn (sampleID)
 );
 
 INSERT INTO Client (clientID, email) VALUES
@@ -155,22 +155,22 @@ INSERT INTO SubSample (subSampleID, sampleID) VALUES
 ('A', 1007),
 ('A', 1008);
 
-INSERT INTO ConductsTestOn (tID, sID, time, instrument) VALUES
-(1, 101, '2026-02-01 09:00:00', 'Spectrometer'),
-(2, 102, '2026-02-01 10:00:00', 'Chromatograph'),
-(3, 103, '2026-02-01 11:00:00', 'Microscope'),
-(4, 104, '2026-02-01 12:00:00', 'DNA Sequencer'),
-(5, 105, '2026-02-01 13:00:00', 'Mass Spectrometer'),
-(6, 101, '2026-02-02 09:30:00', 'Gas Chromatograph'),
-(7, 103, '2026-02-02 10:30:00', 'Electron Microscope'),
-(8, 105, '2026-02-02 11:30:00', 'Particle Analyzer');
+INSERT INTO ConductsTestOn (tID, sampleID, time, instrument) VALUES
+(1, 1001, '2026-02-01 09:00:00', 'Spectrometer'),
+(2, 1002, '2026-02-01 10:00:00', 'Chromatograph'),
+(3, 1003, '2026-02-01 11:00:00', 'Microscope'),
+(4, 1004, '2026-02-01 12:00:00', 'DNA Sequencer'),
+(5, 1005, '2026-02-01 13:00:00', 'Mass Spectrometer'),
+(6, 1001, '2026-02-02 09:30:00', 'Gas Chromatograph'),
+(7, 1003, '2026-02-02 10:30:00', 'Electron Microscope'),
+(8, 1005, '2026-02-02 11:30:00', 'Particle Analyzer');
 
-INSERT INTO TestResults (tID, sID, results) VALUES
-(1, 101, 'High bacterial count'),
-(2, 102, 'Normal chemistry levels'),
-(3, 103, 'High nitrate concentration'),
-(4, 104, 'DNA successfully sequenced'),
-(5, 105, 'Elevated CO2 detected'),
-(6, 101, 'Trace hydrocarbons detected'),
-(7, 103, 'Microbial colonies present'),
-(8, 105, 'Particulate levels within safe limits');
+INSERT INTO TestResults (tID, sampleID, results) VALUES
+(1, 1001, 'High bacterial count'),
+(2, 1002, 'Normal chemistry levels'),
+(3, 1003, 'High nitrate concentration'),
+(4, 1004, 'DNA successfully sequenced'),
+(5, 1005, 'Elevated CO2 detected'),
+(6, 1001, 'Trace hydrocarbons detected'),
+(7, 1003, 'Microbial colonies present'),
+(8, 1005, 'Particulate levels within safe limits');
