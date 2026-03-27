@@ -233,6 +233,31 @@ def table_page(table_key):
         action_message=action_message,
     )
 
+def get_individuals():
+    run_select_query('''SELECT *
+        FROM Individual
+        LEFT JOIN Client
+        ON Individual.cID = Client.clientID''')
+
+def get_companies():
+    run_select_query('''SELECT *
+        FROM Company
+        LEFT JOIN Client
+        ON Company.cID = Client.clientID''')
+
+def samples_by_client(clientID):
+    run_select_query('''SELECT sampleID as ID, description, dateRecieved,
+    CASE
+        WHEN EXISTS(
+            SELECT *
+            FROM TestResults
+            WHERE sampleID = ID
+        ) THEN "true"
+        ELSE "false"
+    END as tested
+    FROM Sample
+    WHERE cID = ''' + clientID)
+
 #enable debugging
 if __name__ == '__main__':
     app.run(debug=True)   
