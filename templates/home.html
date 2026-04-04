@@ -226,12 +226,12 @@
                 <div class="success">{{ results|length }} row(s) returned.</div>
             {% endif %}
 
-            {% if columns and results %}
+            {% if column_names and results %}
                 <div class="table-wrap">
                     <table>
                         <thead>
                             <tr>
-                                {% for column in columns %}
+                                {% for column in column_names %}
                                     <th>{{ column }}</th>
                                 {% endfor %}
                             </tr>
@@ -239,7 +239,7 @@
                         <tbody>
                             {% for row in results %}
                                 <tr>
-                                    {% for column in columns %}
+                                    {% for column in column_names %}
                                         <td>{{ row[column] }}</td>
                                     {% endfor %}
                                 </tr>

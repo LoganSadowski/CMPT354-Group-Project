@@ -30,9 +30,9 @@ TABLE_LABELS = {
     "sample": "Sample",
     "technician": "Technician",
     "department": "Department",
-    "subsample": "SubSample",
-    "conducts_test_on": "ConductsTestOn",
-    "test_results": "TestResults",
+    "subsample": "Sub-sample",
+    "conducts_test_on": "Conducts Test On",
+    "test_results": "Test Results",
 }
 
 DEFAULT_TABLE = "technician"
@@ -90,8 +90,8 @@ def run_select_query(query):
         cursor = conn.cursor()
         cursor.execute(query)
         results = cursor.fetchall()
-        columns = [column[0] for column in cursor.description] if cursor.description else []
-        return columns, results
+        column_names = [column[0] for column in cursor.description] if cursor.description else []
+        return column_names, results
     finally:
         conn.close()
 
@@ -159,13 +159,13 @@ def home():
         default_table=DEFAULT_TABLE,
     )
 
-
+# Dynamic page: select all data from single user-selected table
 @app.route("/<table_key>", methods=["GET", "POST"])
 def table_page(table_key):
     if table_key not in TABLE_QUERIES:
         return "Category not found.", 404
 
-    columns = []
+    column_names = []
     results = []
     error = None
     action_message = None
@@ -215,7 +215,7 @@ def table_page(table_key):
 
     if error is None:
         try:
-            columns, results = run_select_query(query)
+            column_names, results = run_select_query(query)
         except sqlite3.Error as exc:
             error = str(exc)
 
@@ -227,36 +227,83 @@ def table_page(table_key):
         table_labels=TABLE_LABELS,
         table_fields=TABLE_FIELDS[table_key],
         delete_fields=TABLE_PRIMARY_KEYS[table_key],
-        columns=columns,
+        column_names=column_names,
         results=results,
         error=error,
         action_message=action_message,
     )
 
+# Queries for the features on project plan doc
+# Extend Individual to include email from Client table
 def get_individuals():
-    run_select_query('''SELECT *
+    return run_select_query(
+        '''SELECT *
         FROM Individual
         LEFT JOIN Client
-        ON Individual.cID = Client.clientID''')
+        ON Individual.cID = Client.clientID'''
+    )
 
+# Ditto previous but for Company
 def get_companies():
-    run_select_query('''SELECT *
+    return run_select_query(
+        '''SELECT *
         FROM Company
         LEFT JOIN Client
-        ON Company.cID = Client.clientID''')
+        ON Company.cID = Client.clientID'''
+    )
 
 def samples_by_client(clientID):
-    run_select_query('''SELECT sampleID as ID, description, dateRecieved,
-    CASE
-        WHEN EXISTS(
-            SELECT *
-            FROM TestResults
-            WHERE sampleID = ID
-        ) THEN "true"
-        ELSE "false"
-    END as tested
-    FROM Sample
-    WHERE cID = ''' + clientID)
+    return run_select_query(
+        '''SELECT sampleID as ID, description, dateRecieved,
+        CASE
+            WHEN EXISTS(
+                SELECT *
+                FROM TestResults
+                WHERE sampleID = ID
+            ) THEN "true"
+            ELSE "false"
+        END as tested
+        FROM Sample
+        WHERE cID = ''' + clientID
+    )
+
+def storage_contents(storageID):
+    return run_select_query(
+        '''SELECT sampleID, description, dateRecieved
+        FROM Sample
+        WHERE sID = ''' + storageID
+    )
+
+def count_storage(storageID):
+    results = run_select_query(
+        '''SELECT Count(*)
+        FROM Samples
+        WHERE sID = ''' + storageID
+    )
+    return results[1][0][0]
+
+# get more data from other tables
+def get_technicians_ext():
+    return run_select_query(
+        '''SELECT A.technicianID as ID, concat(A.firstName, ' ', A.lastName) as name, D.name as department, 
+        CASE
+            WHEN A.technicianID = D.managerID THEN NULL
+            ELSE concat(B.firstName, ' ', B.lastName)
+        END as manager, (
+        SELECT COUNT(*)
+            FROM ConductsTestOn
+            WHERE tID = A.technicianID
+        ) as numTests, (
+            SELECT GROUP_CONCAT(sampleID)
+            FROM(
+                SELECT DISTINCT sampleID
+                FROM ConductsTestOn
+                WHERE tID = A.technicianID
+            )
+        ) as samplesTested
+        FROM Technician A, Department D, Technician B
+        WHERE D.departmentID = A.depID AND B.technicianID = D.managerID'''
+    )
 
 #enable debugging
 if __name__ == '__main__':
