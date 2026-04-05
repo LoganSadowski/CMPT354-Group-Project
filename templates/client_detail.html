@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Client Detail</title>
+    <style>
+        body { font-family: Arial, Helvetica, sans-serif; margin: 0; background: #f4f7fb; color: #1f2937; }
+        .page { max-width: 1000px; margin: 40px auto; padding: 0 20px; }
+        .card { background: #fff; border-radius: 14px; padding: 24px; box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08); margin-bottom: 20px; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; }
+        input { width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 10px; box-sizing: border-box; }
+        button { background: #2563eb; color: #fff; border: none; border-radius: 10px; padding: 11px 16px; cursor: pointer; }
+        .error { background: #fee2e2; color: #991b1b; padding: 10px; border-radius: 10px; }
+        .success { background: #dcfce7; color: #166534; padding: 10px; border-radius: 10px; }
+        .badge { display: inline-block; background: #dbeafe; color: #1e3a8a; border-radius: 999px; padding: 2px 10px; font-size: 12px; }
+        .list-item { padding: 8px 0; border-bottom: 1px solid #e5e7eb; }
+        .list-item:last-child { border-bottom: none; }
+        a { color: #1d4ed8; text-decoration: none; }
+        a:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <div class="page">
+        <div class="card">
+            <h1>Client {{ client.clientID }}</h1>
+            <p>Type: <strong>{{ client_type }}</strong> <span class="badge">{% if all_samples_tested %}all samples tested{% else %}not all samples tested{% endif %}</span></p>
+            {% if error %}<div class="error">{{ error }}</div>{% endif %}
+            {% if action_message %}<div class="success">{{ action_message }}</div>{% endif %}
+
+            <form method="post">
+                <input type="hidden" name="client_type" value="{{ client_type }}">
+                <div class="grid">
+                    <div>
+                        <label for="email">Email</label>
+                        <input id="email" name="email" value="{{ client.email }}" required>
+                    </div>
+                    {% if client_type == 'company' %}
+                        <div>
+                            <label for="name">Company Name</label>
+                            <input id="name" name="name" value="{{ client.companyName }}" required>
+                        </div>
+                    {% else %}
+                        <div>
+                            <label for="first_name">First Name</label>
+                            <input id="first_name" name="first_name" value="{{ client.firstName }}" required>
+                        </div>
+                        <div>
+                            <label for="last_name">Last Name</label>
+                            <input id="last_name" name="last_name" value="{{ client.lastName }}" required>
+                        </div>
+                    {% endif %}
+                </div>
+                <button type="submit" style="margin-top: 12px;">Update Client</button>
+            </form>
+
+            <p style="margin-top: 14px;"><a href="/">Back to main page</a></p>
+        </div>
+
+        <div class="card">
+            <h2>Submitted Samples</h2>
+            {% for sample in sample_rows %}
+                <div class="list-item">
+                    <a href="/sample/{{ sample.sampleID }}">Sample {{ sample.sampleID }}</a>: {{ sample.description }}
+                    <span class="badge">{% if sample.tested %}tested{% else %}untested{% endif %}</span>
+                </div>
+            {% else %}
+                <p>No samples submitted.</p>
+            {% endfor %}
+        </div>
+    </div>
+</body>
+</html>

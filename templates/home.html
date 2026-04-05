@@ -185,6 +185,8 @@
                 {% endfor %}
             </div>
             <div class="hint">Current page: <strong>{{ selected_label }}</strong></div>
+            <div class="hint"><a href="/search">Search By Category</a></div>
+            <div class="hint"><a href="/sql-demo">SQL Requirement Demo</a></div>
 
             <form method="post" class="add-form">
                 <input type="hidden" name="action" value="add">
@@ -240,7 +242,13 @@
                             {% for row in results %}
                                 <tr>
                                     {% for column in columns %}
-                                        <td>{{ row[column] }}</td>
+                                        <td>
+                                            {% if loop.first and entry_url_builder(selected_table, row) %}
+                                                <a href="{{ entry_url_builder(selected_table, row) }}">{{ row[column] }}</a>
+                                            {% else %}
+                                                {{ row[column] }}
+                                            {% endif %}
+                                        </td>
                                     {% endfor %}
                                 </tr>
                             {% endfor %}

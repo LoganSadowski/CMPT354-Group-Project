@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Search By Category</title>
+    <style>
+        :root {
+            color-scheme: light;
+            font-family: Arial, Helvetica, sans-serif;
+        }
+
+        body {
+            margin: 0;
+            background: #f4f7fb;
+            color: #1f2937;
+        }
+
+        .page {
+            max-width: 1000px;
+            margin: 40px auto;
+            padding: 0 20px;
+        }
+
+        .card {
+            background: #ffffff;
+            border-radius: 14px;
+            padding: 24px;
+            box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+            margin-bottom: 20px;
+        }
+
+        h1, h2 {
+            margin-top: 0;
+        }
+
+        .button-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 10px;
+            margin-top: 16px;
+        }
+
+        .link-btn {
+            display: inline-block;
+            text-align: center;
+            text-decoration: none;
+            background: #2563eb;
+            color: white;
+            border-radius: 10px;
+            padding: 12px 18px;
+            font-size: 15px;
+        }
+
+        .link-btn:hover {
+            background: #1d4ed8;
+        }
+
+        .link-btn.active {
+            background: #1e40af;
+        }
+
+        .search-row {
+            display: flex;
+            gap: 10px;
+            margin-top: 16px;
+            flex-wrap: wrap;
+        }
+
+        .query-builder {
+            margin-top: 14px;
+            padding-top: 14px;
+            border-top: 1px solid #e5e7eb;
+        }
+
+        .query-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        select {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #cbd5e1;
+            border-radius: 10px;
+            box-sizing: border-box;
+            font-size: 14px;
+            background: #ffffff;
+        }
+
+        input[type="text"] {
+            flex: 1;
+            min-width: 220px;
+            padding: 12px;
+            border: 1px solid #cbd5e1;
+            border-radius: 10px;
+            box-sizing: border-box;
+            font-size: 14px;
+        }
+
+        button {
+            background: #2563eb;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            padding: 12px 18px;
+            font-size: 15px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #1d4ed8;
+        }
+
+        .small-link {
+            color: #2563eb;
+            text-decoration: none;
+        }
+
+        .small-link:hover {
+            text-decoration: underline;
+        }
+
+        .error {
+            background: #fee2e2;
+            color: #991b1b;
+            padding: 12px 14px;
+            border-radius: 10px;
+            margin-bottom: 16px;
+        }
+
+        .success {
+            margin-bottom: 16px;
+            font-size: 14px;
+            color: #374151;
+        }
+
+        .table-wrap {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 600px;
+        }
+
+        th, td {
+            text-align: left;
+            padding: 12px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        th {
+            background: #eff6ff;
+            color: #1e3a8a;
+        }
+
+        .empty {
+            padding: 18px;
+            background: #f8fafc;
+            border-radius: 10px;
+            color: #475569;
+        }
+    </style>
+</head>
+<body>
+    <div class="page">
+        <div class="card">
+            <h1>Search By Category</h1>
+            <p>Choose a category, then search using any value from that table.</p>
+
+            <div class="button-grid">
+                {% for table_key, label in table_labels.items() %}
+                    <a
+                        href="/search?category={{ table_key }}&q={{ search_text }}"
+                        class="link-btn {% if selected_table == table_key %}active{% endif %}"
+                    >
+                        {{ label }}
+                    </a>
+                {% endfor %}
+            </div>
+
+            <form method="get" action="/search" class="search-row">
+                <input type="hidden" name="category" value="{{ selected_table }}">
+                <input
+                    name="q"
+                    type="text"
+                    value="{{ search_text }}"
+                    placeholder="Search {{ selected_label }}..."
+                >
+                <button type="submit">Search</button>
+            </form>
+
+            <form method="get" action="/search" class="query-builder">
+                <input type="hidden" name="category" value="{{ selected_table }}">
+                <strong>Find X if Y includes A and Z includes B</strong>
+                <div class="query-grid">
+                    <div>
+                        <label for="find_field">Find X</label>
+                        <select id="find_field" name="find" required>
+                            <option value="">Select field</option>
+                            {% for field in selected_fields %}
+                                <option value="{{ field }}" {% if find_field == field %}selected{% endif %}>{{ field }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div>
+                        <label for="field_y">If Y</label>
+                        <select id="field_y" name="y" required>
+                            <option value="">Select field</option>
+                            {% for field in selected_fields %}
+                                <option value="{{ field }}" {% if field_y == field %}selected{% endif %}>{{ field }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div>
+                        <label for="value_a">Includes A</label>
+                        <input id="value_a" name="a" type="text" value="{{ value_a }}" required>
+                    </div>
+
+                    <div>
+                        <label for="field_z">And Z</label>
+                        <select id="field_z" name="z" required>
+                            <option value="">Select field</option>
+                            {% for field in selected_fields %}
+                                <option value="{{ field }}" {% if field_z == field %}selected{% endif %}>{{ field }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div>
+                        <label for="value_b">Includes B</label>
+                        <input id="value_b" name="b" type="text" value="{{ value_b }}" required>
+                    </div>
+                </div>
+                <button type="submit" style="margin-top: 12px;">Run Conditional Search</button>
+            </form>
+
+            <p style="margin-top: 12px;">Current category: <strong>{{ selected_label }}</strong> | <a class="small-link" href="/">Back to home</a></p>
+        </div>
+
+        <div class="card">
+            <h2>Results</h2>
+
+            {% if error %}
+                <div class="error">{{ error }}</div>
+            {% else %}
+                <div class="success">{{ results|length }} row(s) found.</div>
+            {% endif %}
+
+            {% if columns and results %}
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                {% for column in columns %}
+                                    <th>{{ column }}</th>
+                                {% endfor %}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for row in results %}
+                                <tr>
+                                    {% for column in columns %}
+                                        <td>{{ row[column] }}</td>
+                                    {% endfor %}
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% elif not error %}
+                <div class="empty">No matching rows were found for this search.</div>
+            {% endif %}
+        </div>
+    </div>
+</body>
+</html>

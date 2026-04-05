@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SQL Requirement Demo</title>
+    <style>
+        :root {
+            color-scheme: light;
+            font-family: Arial, Helvetica, sans-serif;
+        }
+
+        body {
+            margin: 0;
+            background: #f4f7fb;
+            color: #1f2937;
+        }
+
+        .page {
+            max-width: 1100px;
+            margin: 40px auto;
+            padding: 0 20px;
+        }
+
+        .card {
+            background: #ffffff;
+            border-radius: 14px;
+            padding: 24px;
+            box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+            margin-bottom: 20px;
+        }
+
+        h1, h2, h3 {
+            margin-top: 0;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+            gap: 10px;
+            margin-top: 12px;
+        }
+
+        .demo-btn {
+            display: block;
+            width: 100%;
+            text-align: left;
+            background: #2563eb;
+            color: #ffffff;
+            border: none;
+            border-radius: 10px;
+            padding: 12px 14px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .demo-btn:hover {
+            background: #1d4ed8;
+        }
+
+        .demo-btn.active {
+            background: #1e40af;
+        }
+
+        .row {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 10px;
+            align-items: end;
+        }
+
+        .field {
+            display: flex;
+            flex-direction: column;
+            min-width: 220px;
+            flex: 1;
+        }
+
+        label {
+            font-size: 13px;
+            color: #475569;
+            margin-bottom: 4px;
+        }
+
+        input[type="text"] {
+            padding: 10px;
+            border: 1px solid #cbd5e1;
+            border-radius: 10px;
+            box-sizing: border-box;
+            font-size: 14px;
+        }
+
+        button.run {
+            background: #0f766e;
+            color: #ffffff;
+            border: none;
+            border-radius: 10px;
+            padding: 11px 14px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        button.run:hover {
+            background: #0d5f59;
+        }
+
+        pre {
+            background: #0f172a;
+            color: #e2e8f0;
+            border-radius: 10px;
+            padding: 14px;
+            overflow-x: auto;
+            white-space: pre-wrap;
+        }
+
+        .error {
+            background: #fee2e2;
+            color: #991b1b;
+            padding: 12px 14px;
+            border-radius: 10px;
+            margin-bottom: 16px;
+        }
+
+        .success {
+            margin-bottom: 16px;
+            font-size: 14px;
+            color: #374151;
+        }
+
+        .table-wrap {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 700px;
+        }
+
+        th, td {
+            text-align: left;
+            padding: 12px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        th {
+            background: #eff6ff;
+            color: #1e3a8a;
+        }
+
+        a {
+            color: #2563eb;
+            text-decoration: none;
+        }
+
+        a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="page">
+        <div class="card">
+            <h1>SQL Requirement Demo</h1>
+            <p>Run one of these SQL demos to match your assignment requirements.</p>
+
+            <form method="post" class="grid">
+                <button class="demo-btn {% if selected_demo == 'join' %}active{% endif %}" name="demo" value="join">{{ demo_titles['join'] }}</button>
+                <button class="demo-btn {% if selected_demo == 'division' %}active{% endif %}" name="demo" value="division">{{ demo_titles['division'] }}</button>
+                <button class="demo-btn {% if selected_demo == 'aggregation' %}active{% endif %}" name="demo" value="aggregation">{{ demo_titles['aggregation'] }}</button>
+                <button class="demo-btn {% if selected_demo == 'group_by' %}active{% endif %}" name="demo" value="group_by">{{ demo_titles['group_by'] }}</button>
+                <button class="demo-btn {% if selected_demo == 'cascade_delete' %}active{% endif %}" name="demo" value="cascade_delete">{{ demo_titles['cascade_delete'] }}</button>
+                <button class="demo-btn {% if selected_demo == 'update' %}active{% endif %}" name="demo" value="update">{{ demo_titles['update'] }}</button>
+            </form>
+
+            <p style="margin-top: 12px;"><strong>Selected demo:</strong> {{ demo_titles[selected_demo] }}</p>
+
+            {% if selected_demo == 'division' %}
+                <form method="post" class="row">
+                    <input type="hidden" name="demo" value="division">
+                    <div class="field">
+                        <label for="storage_id">storage_id (division parameter)</label>
+                        <input id="storage_id" type="text" name="storage_id" value="{{ storage_id }}" required>
+                    </div>
+                    <button class="run" type="submit">Run Division Query</button>
+                </form>
+            {% endif %}
+
+            {% if selected_demo == 'update' %}
+                <form method="post" class="row">
+                    <input type="hidden" name="demo" value="update">
+                    <div class="field">
+                        <label for="technician_id">technician_id</label>
+                        <input id="technician_id" type="text" name="technician_id" value="{{ technician_id }}" required>
+                    </div>
+                    <div class="field">
+                        <label for="new_phone">new_phone</label>
+                        <input id="new_phone" type="text" name="new_phone" value="{{ new_phone }}" required>
+                    </div>
+                    <button class="run" type="submit">Run Update</button>
+                </form>
+            {% endif %}
+
+            {% if selected_demo == 'cascade_delete' %}
+                <form method="post" class="row">
+                    <input type="hidden" name="demo" value="cascade_delete">
+                    <div class="field">
+                        <label for="cascade_client_id">client_id to delete</label>
+                        <input id="cascade_client_id" type="text" name="cascade_client_id" value="{{ cascade_client_id }}" required>
+                    </div>
+                    <button class="run" type="submit">Run Cascade Delete</button>
+                </form>
+            {% endif %}
+
+            {% if selected_demo in demo_queries %}
+                <h3 style="margin-top: 16px;">SQL Used</h3>
+                <pre>{{ demo_queries[selected_demo] }}</pre>
+            {% elif selected_demo == 'update' %}
+                <h3 style="margin-top: 16px;">SQL Used</h3>
+                <pre>UPDATE Technician SET phone = ? WHERE technicianID = ?;
+SELECT technicianID, firstName, lastName, phone FROM Technician WHERE technicianID = ?;</pre>
+            {% elif selected_demo == 'cascade_delete' %}
+                <h3 style="margin-top: 16px;">SQL Used</h3>
+                <pre>-- Manual cascade in transaction order
+DELETE FROM TestResults WHERE sID IN (...);
+DELETE FROM ConductsTestOn WHERE sampleID IN (...);
+DELETE FROM SubSample WHERE sampleID IN (...);
+DELETE FROM Sample WHERE cID = ?;
+DELETE FROM Company WHERE cID = ?;
+DELETE FROM Individual WHERE cID = ?;
+DELETE FROM Client WHERE clientID = ?;</pre>
+            {% endif %}
+
+            <p style="margin-top: 14px;"><a href="/">Back to home</a> | <a href="/search">Back to search</a></p>
+        </div>
+
+        <div class="card">
+            <h2>Results</h2>
+
+            {% if error %}
+                <div class="error">{{ error }}</div>
+            {% elif action_message %}
+                <div class="success">{{ action_message }}</div>
+            {% elif result_columns %}
+                <div class="success">{{ result_rows|length }} row(s) returned.</div>
+            {% else %}
+                <div class="success">Select a query above to run it.</div>
+            {% endif %}
+
+            {% if result_columns and result_rows %}
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                {% for column in result_columns %}
+                                    <th>{{ column }}</th>
+                                {% endfor %}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for row in result_rows %}
+                                <tr>
+                                    {% for column in result_columns %}
+                                        <td>{{ row[column] }}</td>
+                                    {% endfor %}
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</body>
+</html>

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lab Categories</title>
+    <title>Lab Main Dashboard</title>
     <style>
         :root {
             color-scheme: light;
@@ -17,7 +17,7 @@
         }
 
         .page {
-            max-width: 900px;
+            max-width: 1100px;
             margin: 40px auto;
             padding: 0 20px;
         }
@@ -27,6 +27,7 @@
             border-radius: 14px;
             padding: 24px;
             box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+            margin-bottom: 20px;
         }
 
         .grid {
@@ -50,19 +51,181 @@
         .link-btn:hover {
             background: #1d4ed8;
         }
+
+        .row {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        select {
+            padding: 10px;
+            border-radius: 10px;
+            border: 1px solid #cbd5e1;
+        }
+
+        button {
+            background: #2563eb;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            padding: 10px 16px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #1d4ed8;
+        }
+
+        .two-col {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 16px;
+        }
+
+        .list {
+            margin-top: 10px;
+            border: 1px solid #e5e7eb;
+            border-radius: 10px;
+            padding: 10px;
+            background: #f8fafc;
+        }
+
+        .list-item {
+            padding: 8px 4px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .list-item:last-child {
+            border-bottom: none;
+        }
+
+        .muted {
+            color: #6b7280;
+            font-size: 14px;
+        }
+
+        .badge {
+            display: inline-block;
+            border-radius: 999px;
+            padding: 2px 10px;
+            font-size: 12px;
+            margin-left: 8px;
+            background: #dbeafe;
+            color: #1e3a8a;
+        }
+
+        .success {
+            background: #dcfce7;
+            color: #166534;
+            padding: 10px 12px;
+            border-radius: 10px;
+            margin-top: 8px;
+        }
+
+        a {
+            color: #1d4ed8;
+            text-decoration: none;
+        }
+
+        a:hover {
+            text-decoration: underline;
+        }
     </style>
 </head>
 <body>
     <div class="page">
         <div class="card">
-            <h1>Lab Database Categories</h1>
-            <p>Open a category page to retrieve, add, or remove records.</p>
+            <h1>Lab Main Dashboard</h1>
+            <p>This page shows client and sample summaries with required join, division, and aggregation features.</p>
+
+            {% if action_message %}
+                <div class="success">{{ action_message }}</div>
+            {% endif %}
+
             <div class="grid">
                 {% for table_key, label in table_labels.items() %}
                     <a class="link-btn" href="/{{ table_key }}">{{ label }}</a>
                 {% endfor %}
             </div>
+            <p style="margin-top: 16px;"><a href="/search">Open Search By Category</a></p>
+            <p style="margin-top: 16px;"><a href="/sql-demo">Open SQL Requirement Demo</a></p>
             <p style="margin-top: 16px;">Default page: <a href="/{{ default_table }}">{{ table_labels[default_table] }}</a></p>
+        </div>
+
+        <div class="card">
+            <h2>Clients</h2>
+            <p class="muted">Clients are split into companies and individuals. Each row includes email via join and links to its own page.</p>
+            <form method="get" class="row">
+                <label for="client_test_status">Filter clients by sample test status:</label>
+                <select id="client_test_status" name="client_test_status">
+                    <option value="all" {% if client_test_status == 'all' %}selected{% endif %}>All clients</option>
+                    <option value="all_tested" {% if client_test_status == 'all_tested' %}selected{% endif %}>Only all samples tested</option>
+                    <option value="not_all_tested" {% if client_test_status == 'not_all_tested' %}selected{% endif %}>Only not all samples tested</option>
+                </select>
+                <input type="hidden" name="sample_filter" value="{{ sample_filter }}">
+                <button type="submit">Apply</button>
+            </form>
+
+            <div class="two-col" style="margin-top: 14px;">
+                <div class="list">
+                    <strong>Companies</strong>
+                    {% for client in companies %}
+                        <div class="list-item">
+                            <a href="/client/{{ client.clientID }}">{{ client.displayName }}</a>
+                            <span class="muted">(ID: {{ client.clientID }})</span><br>
+                            <span class="muted">{{ client.email }}</span>
+                            <span class="badge">{% if client.allTested %}all tested{% else %}not all tested{% endif %}</span>
+                        </div>
+                    {% else %}
+                        <div class="list-item muted">No companies found.</div>
+                    {% endfor %}
+                </div>
+
+                <div class="list">
+                    <strong>Individuals</strong>
+                    {% for client in individuals %}
+                        <div class="list-item">
+                            <a href="/client/{{ client.clientID }}">{{ client.displayName }}</a>
+                            <span class="muted">(ID: {{ client.clientID }})</span><br>
+                            <span class="muted">{{ client.email }}</span>
+                            <span class="badge">{% if client.allTested %}all tested{% else %}not all tested{% endif %}</span>
+                        </div>
+                    {% else %}
+                        <div class="list-item muted">No individuals found.</div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>Samples</h2>
+            <p class="muted">Samples can be sorted/filter-viewed by tested or untested status.</p>
+
+            <form method="get" class="row">
+                <label for="sample_filter">Sample view:</label>
+                <select id="sample_filter" name="sample_filter">
+                    <option value="all" {% if sample_filter == 'all' %}selected{% endif %}>All samples</option>
+                    <option value="tested" {% if sample_filter == 'tested' %}selected{% endif %}>Tested samples</option>
+                    <option value="untested" {% if sample_filter == 'untested' %}selected{% endif %}>Untested samples</option>
+                </select>
+                <input type="hidden" name="client_test_status" value="{{ client_test_status }}">
+                <button type="submit">Apply</button>
+            </form>
+
+            <div class="list" style="margin-top: 14px;">
+                {% for sample in samples %}
+                    <div class="list-item">
+                        <a href="/sample/{{ sample.sampleID }}">Sample {{ sample.sampleID }}</a>: {{ sample.description }}
+                        <span class="badge">{% if sample.tested %}tested{% else %}untested{% endif %}</span><br>
+                        <span class="muted">Client: <a href="/client/{{ sample.clientID }}">{{ sample.clientID }}</a> ({{ sample.email }})</span>
+                        <span class="muted"> | Storage: <a href="/storage-location/{{ sample.storageID }}">{{ sample.storageID }}</a></span>
+                    </div>
+                {% else %}
+                    <div class="list-item muted">No samples found.</div>
+                {% endfor %}
+            </div>
         </div>
     </div>
 </body>

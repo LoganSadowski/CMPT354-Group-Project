@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SubSample Detail</title>
+    <style>
+        body { font-family: Arial, Helvetica, sans-serif; margin: 0; background: #f4f7fb; color: #1f2937; }
+        .page { max-width: 900px; margin: 40px auto; padding: 0 20px; }
+        .card { background: #fff; border-radius: 14px; padding: 24px; box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08); margin-bottom: 20px; }
+        input { width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 10px; box-sizing: border-box; }
+        button { background: #2563eb; color: #fff; border: none; border-radius: 10px; padding: 11px 16px; cursor: pointer; }
+        .error { background: #fee2e2; color: #991b1b; padding: 10px; border-radius: 10px; }
+        .success { background: #dcfce7; color: #166534; padding: 10px; border-radius: 10px; }
+        a { color: #1d4ed8; text-decoration: none; }
+        a:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <div class="page">
+        <div class="card">
+            <h1>SubSample {{ subsample.subSampleID }}</h1>
+            <p>Came from <a href="/sample/{{ subsample.sampleID }}">Sample {{ subsample.sampleID }}</a>: {{ subsample.description }}</p>
+            <p>Status: <strong>{% if subsample_tested %}tested{% else %}untested{% endif %}</strong></p>
+            {% if subsample.parentSubSampleID %}
+                <p>Parent SubSample: <a href="/subsample/{{ subsample.parentSubSampleID }}/{{ subsample.sampleID }}">{{ subsample.parentSubSampleID }}</a></p>
+            {% endif %}
+            {% if error %}<div class="error">{{ error }}</div>{% endif %}
+            {% if action_message %}<div class="success">{{ action_message }}</div>{% endif %}
+
+            <form method="post">
+                <input type="hidden" name="action" value="rename">
+                <label for="subSampleID">Rename SubSample ID</label>
+                <input id="subSampleID" name="subSampleID" value="{{ subsample.subSampleID }}" required>
+                <button type="submit" style="margin-top: 12px;">Update SubSample</button>
+            </form>
+
+            <form method="post" style="margin-top: 12px;">
+                <input type="hidden" name="action" value="add_child">
+                <label for="child_subSampleID">Create Child SubSample</label>
+                <input id="child_subSampleID" name="child_subSampleID" placeholder="e.g. {{ subsample.subSampleID }}.1" required>
+                <button type="submit" style="margin-top: 12px;">Create Child SubSample</button>
+            </form>
+
+            <h3 style="margin-top: 18px;">Direct Child SubSamples</h3>
+            {% for child in child_rows %}
+                <div><a href="/subsample/{{ child.subSampleID }}/{{ child.sampleID }}">{{ child.subSampleID }}</a></div>
+            {% else %}
+                <p>No child subsamples yet.</p>
+            {% endfor %}
+
+            <h3 style="margin-top: 18px;">SubSample Test Results</h3>
+            <form method="post">
+                <input type="hidden" name="action" value="add_result">
+                <label for="result_tid">Technician ID</label>
+                <input id="result_tid" name="result_tid" required>
+                <label for="result_description" style="margin-top: 10px; display: block;">Test Description</label>
+                <input id="result_description" name="result_description" placeholder="e.g. Particle count" required>
+                <label for="result_value" style="margin-top: 10px; display: block;">Actual Result Value</label>
+                <input id="result_value" name="result_value" placeholder="e.g. 120 particles/mL">
+                <button type="submit" style="margin-top: 12px;">Add SubSample Result</button>
+            </form>
+
+            <div style="margin-top: 12px;">
+                {% for result in subsample_result_rows %}
+                    <div>Technician {{ result.tID }}: {{ result.description }} | Actual result value: {{ result.actualResult or 'N/A' }}</div>
+                {% else %}
+                    <p>No SubSample results yet.</p>
+                {% endfor %}
+            </div>
+
+            <p style="margin-top: 14px;"><a href="/">Back to main page</a></p>
+        </div>
+    </div>
+</body>
+</html>

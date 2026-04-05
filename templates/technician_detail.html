@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Technician Detail</title>
+    <style>
+        body { font-family: Arial, Helvetica, sans-serif; margin: 0; background: #f4f7fb; color: #1f2937; }
+        .page { max-width: 1000px; margin: 40px auto; padding: 0 20px; }
+        .card { background: #fff; border-radius: 14px; padding: 24px; box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08); margin-bottom: 20px; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; }
+        input { width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 10px; box-sizing: border-box; }
+        button { background: #2563eb; color: #fff; border: none; border-radius: 10px; padding: 11px 16px; cursor: pointer; }
+        .error { background: #fee2e2; color: #991b1b; padding: 10px; border-radius: 10px; }
+        .success { background: #dcfce7; color: #166534; padding: 10px; border-radius: 10px; }
+        .list-item { padding: 8px 0; border-bottom: 1px solid #e5e7eb; }
+        .list-item:last-child { border-bottom: none; }
+        a { color: #1d4ed8; text-decoration: none; }
+        a:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <div class="page">
+        <div class="card">
+            <h1>Technician {{ technician.technicianID }}</h1>
+            <p>Department: <a href="/department/{{ technician.depID }}">{{ technician.departmentName or technician.depID }}</a></p>
+            <p>Manager: {% if technician.managerID %}<a href="/technician/{{ technician.managerID }}">{{ technician.managerName }}</a>{% else %}N/A{% endif %}</p>
+            <p>Number of samples tested (aggregation): <strong>{{ technician.sampleCount }}</strong></p>
+            {% if error %}<div class="error">{{ error }}</div>{% endif %}
+            {% if action_message %}<div class="success">{{ action_message }}</div>{% endif %}
+
+            <form method="post">
+                <div class="grid">
+                    <div><label for="firstName">First Name</label><input id="firstName" name="firstName" value="{{ technician.firstName }}" required></div>
+                    <div><label for="lastName">Last Name</label><input id="lastName" name="lastName" value="{{ technician.lastName }}" required></div>
+                    <div><label for="email">Email</label><input id="email" name="email" value="{{ technician.email }}" required></div>
+                    <div><label for="phone">Phone</label><input id="phone" name="phone" value="{{ technician.phone }}" required></div>
+                    <div><label for="depID">Department ID</label><input id="depID" name="depID" value="{{ technician.depID }}" required></div>
+                </div>
+                <button type="submit" style="margin-top: 12px;">Update Technician</button>
+            </form>
+            <p style="margin-top: 14px;"><a href="/">Back to main page</a></p>
+        </div>
+
+        <div class="card">
+            <h2>Samples Tested by This Technician</h2>
+            {% for sample in tested_samples %}
+                <div class="list-item"><a href="/sample/{{ sample.sampleID }}">Sample {{ sample.sampleID }}</a>: {{ sample.description }}</div>
+            {% else %}
+                <p>No samples tested yet.</p>
+            {% endfor %}
+        </div>
+    </div>
+</body>
+</html>
