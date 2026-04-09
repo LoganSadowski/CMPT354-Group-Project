@@ -1,6 +1,7 @@
 #create Flask instance
 
 import sqlite3
+import re
 from flask import Flask, redirect, render_template, request, url_for
 app = Flask(__name__)
 
@@ -14,9 +15,10 @@ TABLE_NAMES = {
     "sample": "Sample",
     "technician": "Technician",
     "department": "Department",
+    "analyte": "Analyte",
     "subsample": "SubSample",
-    "conducts_test_on": "ConductsTestOn",
-    "test_results": "TestResults",
+    "conducts_test_on": "TestRun",
+    "test_results": "TestMeasurement",
 }
 
 TABLE_QUERIES = {
@@ -32,9 +34,10 @@ TABLE_LABELS = {
     "sample": "Sample",
     "technician": "Technician",
     "department": "Department",
+    "analyte": "Analyte",
     "subsample": "SubSample",
-    "conducts_test_on": "ConductsTestOn",
-    "test_results": "TestResults",
+    "conducts_test_on": "TestRun",
+    "test_results": "TestMeasurement",
 }
 
 DEFAULT_TABLE = "technician"
@@ -47,14 +50,17 @@ TABLE_FIELDS = {
     "sample": ["sampleID", "description", "dateReceived", "cID", "sID"],
     "technician": ["technicianID", "firstName", "lastName", "email", "phone", "depID"],
     "department": ["departmentID", "name", "managerID"],
+    "analyte": ["analyteID", "name", "defaultUnit", "dataType"],
     "subsample": ["subSampleID", "sampleID", "parentSubSampleID"],
-    "conducts_test_on": ["tID", "sampleID", "time", "instrument"],
-    "test_results": ["tID", "sID", "results", "actualResult"],
+    "conducts_test_on": ["testRunID", "sampleID", "technicianID", "testType", "performedAt", "instrument", "status", "notes"],
+    "test_results": ["testRunID", "analyteID", "valueNumeric", "valueText"],
 }
 
 OPTIONAL_FIELDS = {
     "sample": {"sID"},
-    "conducts_test_on": {"time", "instrument"},
+    "conducts_test_on": {"performedAt", "instrument", "notes"},
+    "test_results": {"valueNumeric", "valueText"},
+    "analyte": {"defaultUnit"},
     "subsample": {"parentSubSampleID"},
 }
 
@@ -66,15 +72,16 @@ TABLE_PRIMARY_KEYS = {
     "sample": ["sampleID"],
     "technician": ["technicianID"],
     "department": ["departmentID"],
+    "analyte": ["analyteID"],
     "subsample": ["subSampleID", "sampleID"],
-    "conducts_test_on": ["tID", "sampleID"],
-    "test_results": ["tID", "sID", "results"],
+    "conducts_test_on": ["testRunID"],
+    "test_results": ["testRunID", "analyteID"],
 }
 
 SQL_DEMO_TITLES = {
     "join": "Sample Ownership and Assigned Technician (Join)",
-    "division": "Technicians Who Tested Every Sample in a Storage Location (Division)",
-    "aggregation": "Overall Sample Intake Timeline and Count (Aggregation)",
+    "division": "Clients Whose Every Sample Has Been Tested (Division)",
+    "aggregation": "Technician Workload Summary (Aggregation)",
     "group_by": "Client Workload Summary by Number of Samples (Group By)",
     "cascade_delete": "Client Offboarding with Cascading Data Cleanup (Delete + Cascade)",
     "update": "Technician Contact Correction (Update)",
@@ -86,6 +93,37 @@ def dict_factory(cursor, row):
     for idx, col in enumerate(cursor.description):
         d[col[0]] = row[idx]
     return d
+
+
+def format_sql_for_display(query):
+    formatted = " ".join(query.split())
+    replacements = [
+        (r"\bSELECT\b", "\nSELECT"),
+        (r"\bFROM\b", "\nFROM"),
+        (r"\bLEFT JOIN\b", "\nLEFT JOIN"),
+        (r"\bRIGHT JOIN\b", "\nRIGHT JOIN"),
+        (r"\bINNER JOIN\b", "\nINNER JOIN"),
+        (r"\bCROSS JOIN\b", "\nCROSS JOIN"),
+        (r"\bJOIN\b", "\nJOIN"),
+        (r"\bWHERE\b", "\nWHERE"),
+        (r"\bGROUP BY\b", "\nGROUP BY"),
+        (r"\bHAVING\b", "\nHAVING"),
+        (r"\bORDER BY\b", "\nORDER BY"),
+        (r"\bEXCEPT\b", "\nEXCEPT"),
+        (r"\bUNION ALL\b", "\nUNION ALL"),
+        (r"\bUNION\b", "\nUNION"),
+        (r"\bCASE\b", "\nCASE"),
+        (r"\bWHEN\b", "\n  WHEN"),
+        (r"\bELSE\b", "\n  ELSE"),
+        (r"\bEND\b", "\nEND"),
+    ]
+    for pattern, replacement in replacements:
+        formatted = re.sub(pattern, replacement, formatted, flags=re.IGNORECASE)
+    formatted = re.sub(r",\s*", ",\n    ", formatted)
+    formatted = formatted.strip()
+    if not formatted.endswith(";"):
+        formatted += ";"
+    return formatted
 
 
 def get_connection():
@@ -108,10 +146,47 @@ def ensure_schema_updates():
         if "parentSubSampleID" not in subsample_columns:
             cursor.execute("ALTER TABLE SubSample ADD COLUMN parentSubSampleID CHAR")
 
-        cursor.execute("PRAGMA table_info(TestResults)")
-        test_result_columns = {row[1] for row in cursor.fetchall()}
-        if "actualResult" not in test_result_columns:
-            cursor.execute("ALTER TABLE TestResults ADD COLUMN actualResult VARCHAR(100)")
+        cursor.execute(
+            "CREATE TABLE IF NOT EXISTS TestRun ("
+            "testRunID INT NOT NULL, "
+            "sampleID INT NOT NULL, "
+            "technicianID INT NOT NULL, "
+            "testType VARCHAR(50) NOT NULL, "
+            "performedAt DATETIME, "
+            "instrument VARCHAR(50), "
+            "status VARCHAR(20) NOT NULL, "
+            "notes VARCHAR(300), "
+            "PRIMARY KEY (testRunID), "
+            "FOREIGN KEY (sampleID) REFERENCES Sample (sampleID), "
+            "FOREIGN KEY (technicianID) REFERENCES Technician (technicianID)"
+            ")"
+        )
+
+        cursor.execute(
+            "CREATE TABLE IF NOT EXISTS Analyte ("
+            "analyteID INT NOT NULL, "
+            "name VARCHAR(100) NOT NULL, "
+            "defaultUnit VARCHAR(20), "
+            "dataType VARCHAR(20) NOT NULL, "
+            "PRIMARY KEY (analyteID)"
+            ")"
+        )
+
+        cursor.execute(
+            "CREATE TABLE IF NOT EXISTS TestMeasurement ("
+            "testRunID INT NOT NULL, "
+            "analyteID INT NOT NULL, "
+            "valueNumeric DECIMAL(12,4), "
+            "valueText VARCHAR(200), "
+            "PRIMARY KEY (testRunID, analyteID), "
+            "FOREIGN KEY (testRunID) REFERENCES TestRun (testRunID), "
+            "FOREIGN KEY (analyteID) REFERENCES Analyte (analyteID)"
+            ")"
+        )
+
+        cursor.execute(
+            "INSERT OR IGNORE INTO Analyte (analyteID, name, defaultUnit, dataType) VALUES (1, 'Overall Finding', NULL, 'text')"
+        )
 
         cursor.execute(
             "CREATE TABLE IF NOT EXISTS SubSampleResult ("
@@ -198,6 +273,29 @@ def run_conditional_search_query(table_key, find_field, field_y, value_a, field_
         conn.close()
 
 
+def get_field_value_options(table_key, limit=200):
+    table_name = TABLE_NAMES[table_key]
+    fields = TABLE_FIELDS[table_key]
+    conn = get_connection()
+    conn.row_factory = dict_factory
+    options = {}
+    try:
+        cursor = conn.cursor()
+        for field in fields:
+            query = (
+                f"SELECT DISTINCT CAST({field} AS TEXT) AS value "
+                f"FROM {table_name} "
+                f"WHERE {field} IS NOT NULL "
+                "ORDER BY 1 "
+                "LIMIT ?"
+            )
+            cursor.execute(query, (limit,))
+            options[field] = [row["value"] for row in cursor.fetchall()]
+        return options
+    finally:
+        conn.close()
+
+
 def run_parameterized_select(query, params=()):
     ensure_schema_updates()
     conn = get_connection()
@@ -246,10 +344,13 @@ def run_cascade_delete_client(client_id):
 
         if sample_ids:
             placeholders = ",".join(["?"] * len(sample_ids))
-            cursor.execute(f"DELETE FROM TestResults WHERE sID IN ({placeholders})", sample_ids)
+            cursor.execute(
+                f"DELETE FROM TestMeasurement WHERE testRunID IN (SELECT testRunID FROM TestRun WHERE sampleID IN ({placeholders}))",
+                sample_ids,
+            )
             deleted_counts["test_results"] = cursor.rowcount
 
-            cursor.execute(f"DELETE FROM ConductsTestOn WHERE sampleID IN ({placeholders})", sample_ids)
+            cursor.execute(f"DELETE FROM TestRun WHERE sampleID IN ({placeholders})", sample_ids)
             deleted_counts["conducts_test_on"] = cursor.rowcount
 
             cursor.execute(f"DELETE FROM SubSample WHERE sampleID IN ({placeholders})", sample_ids)
@@ -336,7 +437,7 @@ def fetch_company_clients(test_status):
         "NOT EXISTS ("
         "SELECT 1 FROM Sample s "
         "WHERE s.cID = c.clientID "
-        "AND NOT EXISTS (SELECT 1 FROM TestResults tr WHERE tr.sID = s.sampleID)"
+        "AND NOT EXISTS (SELECT 1 FROM TestRun tr WHERE tr.sampleID = s.sampleID)"
         ")"
     )
     where_clause = ""
@@ -361,7 +462,7 @@ def fetch_individual_clients(test_status):
         "NOT EXISTS ("
         "SELECT 1 FROM Sample s "
         "WHERE s.cID = c.clientID "
-        "AND NOT EXISTS (SELECT 1 FROM TestResults tr WHERE tr.sID = s.sampleID)"
+        "AND NOT EXISTS (SELECT 1 FROM TestRun tr WHERE tr.sampleID = s.sampleID)"
         ")"
     )
     where_clause = ""
@@ -384,13 +485,13 @@ def fetch_individual_clients(test_status):
 def fetch_samples_for_main(sample_filter):
     where_clause = ""
     if sample_filter == "tested":
-        where_clause = "WHERE EXISTS (SELECT 1 FROM TestResults tr WHERE tr.sID = s.sampleID)"
+        where_clause = "WHERE EXISTS (SELECT 1 FROM TestRun tr WHERE tr.sampleID = s.sampleID)"
     elif sample_filter == "untested":
-        where_clause = "WHERE NOT EXISTS (SELECT 1 FROM TestResults tr WHERE tr.sID = s.sampleID)"
+        where_clause = "WHERE NOT EXISTS (SELECT 1 FROM TestRun tr WHERE tr.sampleID = s.sampleID)"
 
     query = (
         "SELECT s.sampleID, s.description, s.dateReceived, s.cID AS clientID, c.email, s.sID AS storageID, "
-        "CASE WHEN EXISTS (SELECT 1 FROM TestResults tr WHERE tr.sID = s.sampleID) THEN 1 ELSE 0 END AS tested "
+        "CASE WHEN EXISTS (SELECT 1 FROM TestRun tr WHERE tr.sampleID = s.sampleID) THEN 1 ELSE 0 END AS tested "
         "FROM Sample s "
         "JOIN Client c ON c.clientID = s.cID "
         f"{where_clause} "
@@ -427,10 +528,13 @@ def run_cascade_delete_storage(storage_id):
 
         if sample_ids:
             placeholders = ",".join(["?"] * len(sample_ids))
-            cursor.execute(f"DELETE FROM TestResults WHERE sID IN ({placeholders})", sample_ids)
+            cursor.execute(
+                f"DELETE FROM TestMeasurement WHERE testRunID IN (SELECT testRunID FROM TestRun WHERE sampleID IN ({placeholders}))",
+                sample_ids,
+            )
             deleted_counts["test_results"] = cursor.rowcount
 
-            cursor.execute(f"DELETE FROM ConductsTestOn WHERE sampleID IN ({placeholders})", sample_ids)
+            cursor.execute(f"DELETE FROM TestRun WHERE sampleID IN ({placeholders})", sample_ids)
             deleted_counts["conducts_test_on"] = cursor.rowcount
 
             cursor.execute(f"DELETE FROM SubSample WHERE sampleID IN ({placeholders})", sample_ids)
@@ -459,6 +563,8 @@ def get_entry_url(table_key, row):
         return url_for("technician_detail", technician_id=row["technicianID"])
     if table_key == "department":
         return url_for("department_detail", department_id=row["departmentID"])
+    if table_key == "analyte":
+        return url_for("analyte_detail", analyte_id=row["analyteID"])
     if table_key == "subsample":
         return url_for("subsample_detail", sub_sample_id=row["subSampleID"], sample_id=row["sampleID"])
     return None
@@ -487,32 +593,62 @@ def create_subsample(subsample_id, sample_id, parent_subsample_id=None):
         conn.close()
 
 
-def add_sample_result(sample_id, technician_id, description, actual_result):
+def add_sample_result(sample_id, technician_id, analyte_id, actual_result):
     ensure_schema_updates()
     conn = get_connection()
     try:
         cursor = conn.cursor()
+
+        cursor.execute("SELECT 1 FROM Analyte WHERE analyteID = ?", (analyte_id,))
+        if cursor.fetchone() is None:
+            raise ValueError("Selected analyte does not exist.")
+
+        cursor.execute("SELECT COALESCE(MAX(testRunID), 0) + 1 FROM TestRun")
+        test_run_id = cursor.fetchone()[0]
+
         cursor.execute(
-            "INSERT OR IGNORE INTO ConductsTestOn (tID, sampleID, time, instrument) VALUES (?, ?, NULL, NULL)",
-            (technician_id, sample_id),
+            "INSERT INTO TestRun (testRunID, sampleID, technicianID, testType, performedAt, instrument, status, notes) "
+            "VALUES (?, ?, ?, ?, DATETIME('now'), NULL, ?, NULL)",
+            (test_run_id, sample_id, technician_id, 'Ad Hoc Result Entry', 'completed'),
         )
         cursor.execute(
-            "INSERT INTO TestResults (tID, sID, results, actualResult) VALUES (?, ?, ?, ?)",
-            (technician_id, sample_id, description, actual_result),
+            "INSERT INTO TestMeasurement (testRunID, analyteID, valueNumeric, valueText) "
+            "VALUES (?, ?, ?, ?)",
+            (
+                test_run_id,
+                analyte_id,
+                float(actual_result) if actual_result not in (None, "") and _is_number(actual_result) else None,
+                None if actual_result not in (None, "") and _is_number(actual_result) else (actual_result if actual_result else None),
+            ),
         )
         conn.commit()
     finally:
         conn.close()
 
 
-def add_subsample_result(subsample_id, sample_id, technician_id, description, actual_result):
+def _is_number(value):
+    try:
+        float(value)
+        return True
+    except (TypeError, ValueError):
+        return False
+
+
+def add_subsample_result(subsample_id, sample_id, technician_id, analyte_id, actual_result):
     ensure_schema_updates()
     conn = get_connection()
     try:
         cursor = conn.cursor()
+
+        cursor.execute("SELECT name FROM Analyte WHERE analyteID = ?", (analyte_id,))
+        analyte_row = cursor.fetchone()
+        if analyte_row is None:
+            raise ValueError("Selected analyte does not exist.")
+        analyte_name = analyte_row[0]
+
         cursor.execute(
             "INSERT INTO SubSampleResult (subSampleID, sampleID, tID, description, actualResult) VALUES (?, ?, ?, ?, ?)",
-            (subsample_id, sample_id, technician_id, description, actual_result),
+            (subsample_id, sample_id, technician_id, analyte_name, actual_result),
         )
         conn.commit()
     finally:
@@ -552,6 +688,36 @@ def get_subsample_hierarchy(sample_id):
     return ordered
 
 
+def build_subsample_tree(subsamples):
+    node_map = {}
+    for subsample in subsamples:
+        parent_id = subsample["parentSubSampleID"]
+        if isinstance(parent_id, str):
+            parent_id = parent_id.strip() or None
+        node_map[subsample["subSampleID"]] = {
+            "subSampleID": subsample["subSampleID"],
+            "sampleID": subsample["sampleID"],
+            "parentSubSampleID": parent_id,
+            "children": [],
+        }
+
+    roots = []
+    for node in node_map.values():
+        parent_id = node["parentSubSampleID"]
+        if parent_id and parent_id in node_map:
+            node_map[parent_id]["children"].append(node)
+        else:
+            roots.append(node)
+
+    def sort_nodes(nodes):
+        nodes.sort(key=lambda item: item["subSampleID"])
+        for child in nodes:
+            sort_nodes(child["children"])
+
+    sort_nodes(roots)
+    return roots
+
+
 @app.route("/")
 def home():
     ensure_schema_updates()
@@ -588,39 +754,58 @@ def client_detail(client_id):
     action_message = None
 
     if request.method == "POST":
-        email = request.form.get("email", "").strip()
-        client_type = request.form.get("client_type", "").strip()
-        name = request.form.get("name", "").strip()
-        first_name = request.form.get("first_name", "").strip()
-        last_name = request.form.get("last_name", "").strip()
+        action = request.form.get("action", "update").strip()
 
-        if not email:
-            error = "email is required."
-        else:
-            conn = get_connection()
+        if action == "delete_cascade":
             try:
-                cursor = conn.cursor()
-                cursor.execute("UPDATE Client SET email = ? WHERE clientID = ?", (email, client_id))
-
-                if client_type == "company":
-                    if not name:
-                        raise ValueError("company name is required.")
-                    cursor.execute("UPDATE Company SET name = ? WHERE cID = ?", (name, client_id))
-                else:
-                    if not first_name or not last_name:
-                        raise ValueError("first_name and last_name are required.")
-                    cursor.execute(
-                        "UPDATE Individual SET firstName = ?, lastName = ? WHERE cID = ?",
-                        (first_name, last_name, client_id),
-                    )
-
-                conn.commit()
-                action_message = "Client entry updated successfully."
-            except (sqlite3.Error, ValueError) as exc:
-                conn.rollback()
+                deleted = run_cascade_delete_client(client_id)
+                summary = (
+                    f"Deleted client {client_id} with cascade: "
+                    f"Client={deleted['client']}, "
+                    f"Company={deleted['company']}, "
+                    f"Individual={deleted['individual']}, "
+                    f"Sample={deleted['sample']}, "
+                    f"SubSample={deleted['subsample']}, "
+                    f"TestRun={deleted['conducts_test_on']}, "
+                    f"TestMeasurement={deleted['test_results']}"
+                )
+                return redirect(url_for("home", action_message=summary))
+            except sqlite3.Error as exc:
                 error = str(exc)
-            finally:
-                conn.close()
+        else:
+            email = request.form.get("email", "").strip()
+            client_type = request.form.get("client_type", "").strip()
+            name = request.form.get("name", "").strip()
+            first_name = request.form.get("first_name", "").strip()
+            last_name = request.form.get("last_name", "").strip()
+
+            if not email:
+                error = "email is required."
+            else:
+                conn = get_connection()
+                try:
+                    cursor = conn.cursor()
+                    cursor.execute("UPDATE Client SET email = ? WHERE clientID = ?", (email, client_id))
+
+                    if client_type == "company":
+                        if not name:
+                            raise ValueError("company name is required.")
+                        cursor.execute("UPDATE Company SET name = ? WHERE cID = ?", (name, client_id))
+                    else:
+                        if not first_name or not last_name:
+                            raise ValueError("first_name and last_name are required.")
+                        cursor.execute(
+                            "UPDATE Individual SET firstName = ?, lastName = ? WHERE cID = ?",
+                            (first_name, last_name, client_id),
+                        )
+
+                    conn.commit()
+                    action_message = "Client entry updated successfully."
+                except (sqlite3.Error, ValueError) as exc:
+                    conn.rollback()
+                    error = str(exc)
+                finally:
+                    conn.close()
 
     _, client_rows = run_parameterized_select(
         "SELECT c.clientID, c.email, co.name AS companyName, i.firstName, i.lastName "
@@ -638,7 +823,7 @@ def client_detail(client_id):
 
     _, sample_rows = run_parameterized_select(
         "SELECT s.sampleID, s.description, s.dateReceived, "
-        "CASE WHEN EXISTS (SELECT 1 FROM TestResults tr WHERE tr.sID = s.sampleID) THEN 1 ELSE 0 END AS tested "
+        "CASE WHEN EXISTS (SELECT 1 FROM TestRun tr WHERE tr.sampleID = s.sampleID) THEN 1 ELSE 0 END AS tested "
         "FROM Sample s "
         "WHERE s.cID = ? "
         "ORDER BY s.sampleID",
@@ -649,17 +834,32 @@ def client_detail(client_id):
         "SELECT CASE WHEN NOT EXISTS ("
         "SELECT 1 FROM Sample s "
         "WHERE s.cID = ? "
-        "AND NOT EXISTS (SELECT 1 FROM TestResults tr WHERE tr.sID = s.sampleID)"
+        "AND NOT EXISTS (SELECT 1 FROM TestRun tr WHERE tr.sampleID = s.sampleID)"
         ") THEN 1 ELSE 0 END AS allSamplesTested",
         (client_id,),
     )
     all_samples_tested = bool(division_rows[0]["allSamplesTested"]) if division_rows else False
+
+    _, sample_count_rows = run_parameterized_select(
+        "SELECT c.clientID, c.email, COUNT(s.sampleID) AS sampleCount "
+        "FROM Client c "
+        "LEFT JOIN Sample s ON c.clientID = s.cID "
+        "WHERE c.clientID = ? "
+        "GROUP BY c.clientID, c.email",
+        (client_id,),
+    )
+    sample_count = sample_count_rows[0]["sampleCount"] if sample_count_rows else 0
+    tested_sample_count = sum(1 for sample in sample_rows if sample["tested"])
+    tested_percentage = round((tested_sample_count / sample_count) * 100, 1) if sample_count else 0.0
 
     return render_template(
         "client_detail.html",
         client=client,
         client_type=client_type,
         sample_rows=sample_rows,
+        sample_count=sample_count,
+        tested_sample_count=tested_sample_count,
+        tested_percentage=tested_percentage,
         all_samples_tested=all_samples_tested,
         error=error,
         action_message=action_message,
@@ -682,8 +882,8 @@ def storage_location_detail(storage_id):
                     f"StorageLocation={deleted['storage_location']}, "
                     f"Sample={deleted['sample']}, "
                     f"SubSample={deleted['subsample']}, "
-                    f"ConductsTestOn={deleted['conducts_test_on']}, "
-                    f"TestResults={deleted['test_results']}"
+                    f"TestRun={deleted['conducts_test_on']}, "
+                    f"TestMeasurement={deleted['test_results']}"
                 )
                 return redirect(url_for("home", action_message=summary))
 
@@ -783,7 +983,7 @@ def technician_detail(technician_id):
         "FROM Technician t "
         "LEFT JOIN Department d ON d.departmentID = t.depID "
         "LEFT JOIN Technician m ON m.technicianID = d.managerID "
-        "LEFT JOIN ConductsTestOn ct ON ct.tID = t.technicianID "
+        "LEFT JOIN TestRun ct ON ct.technicianID = t.technicianID "
         "WHERE t.technicianID = ? "
         "GROUP BY t.technicianID, t.firstName, t.lastName, t.email, t.phone, t.depID, d.name, d.managerID, managerName",
         (technician_id,),
@@ -794,9 +994,9 @@ def technician_detail(technician_id):
 
     _, tested_samples = run_parameterized_select(
         "SELECT DISTINCT s.sampleID, s.description "
-        "FROM ConductsTestOn ct "
+        "FROM TestRun ct "
         "JOIN Sample s ON s.sampleID = ct.sampleID "
-        "WHERE ct.tID = ? "
+        "WHERE ct.technicianID = ? "
         "ORDER BY s.sampleID",
         (technician_id,),
     )
@@ -844,7 +1044,7 @@ def department_detail(department_id):
         "FROM Department d "
         "LEFT JOIN Technician m ON m.technicianID = d.managerID "
         "LEFT JOIN Technician t ON t.depID = d.departmentID "
-        "LEFT JOIN ConductsTestOn ct ON ct.tID = t.technicianID "
+        "LEFT JOIN TestRun ct ON ct.technicianID = t.technicianID "
         "WHERE d.departmentID = ? "
         "GROUP BY d.departmentID, d.name, d.managerID, managerName",
         (department_id,),
@@ -863,6 +1063,58 @@ def department_detail(department_id):
         "department_detail.html",
         department=department,
         technicians=technicians,
+        error=error,
+        action_message=action_message,
+    )
+
+
+@app.route("/analyte/<int:analyte_id>", methods=["GET", "POST"])
+def analyte_detail(analyte_id):
+    ensure_schema_updates()
+    error = None
+    action_message = None
+
+    if request.method == "POST":
+        name = request.form.get("name", "").strip()
+        default_unit = request.form.get("defaultUnit", "").strip()
+        data_type = request.form.get("dataType", "").strip()
+
+        if not name or not data_type:
+            error = "name and dataType are required."
+        else:
+            try:
+                conn = get_connection()
+                try:
+                    cursor = conn.cursor()
+                    cursor.execute(
+                        "UPDATE Analyte SET name = ?, defaultUnit = ?, dataType = ? WHERE analyteID = ?",
+                        (name, default_unit if default_unit else None, data_type, analyte_id),
+                    )
+                    conn.commit()
+                    action_message = "Analyte updated successfully."
+                finally:
+                    conn.close()
+            except sqlite3.Error as exc:
+                error = str(exc)
+
+    _, analyte_rows = run_parameterized_select(
+        "SELECT analyteID, name, defaultUnit, dataType FROM Analyte WHERE analyteID = ?",
+        (analyte_id,),
+    )
+    if not analyte_rows:
+        return "Analyte not found.", 404
+    analyte = analyte_rows[0]
+
+    _, usage_rows = run_parameterized_select(
+        "SELECT COUNT(*) AS measurementCount FROM TestMeasurement WHERE analyteID = ?",
+        (analyte_id,),
+    )
+    measurement_count = usage_rows[0]["measurementCount"] if usage_rows else 0
+
+    return render_template(
+        "analyte_detail.html",
+        analyte=analyte,
+        measurement_count=measurement_count,
         error=error,
         action_message=action_message,
     )
@@ -889,16 +1141,16 @@ def sample_detail(sample_id):
                     error = str(exc)
         elif action == "add_result":
             technician_id = request.form.get("result_tid", "").strip()
-            result_description = request.form.get("result_description", "").strip()
+            analyte_id = request.form.get("result_analyte_id", "").strip()
             actual_result = request.form.get("result_value", "").strip()
 
-            if not technician_id or not result_description:
-                error = "result_tid and result_description are required."
+            if not technician_id or not analyte_id:
+                error = "result_tid and result_analyte_id are required."
             else:
                 try:
-                    add_sample_result(sample_id, technician_id, result_description, actual_result or None)
+                    add_sample_result(sample_id, technician_id, analyte_id, actual_result or None)
                     action_message = "Sample result added successfully."
-                except sqlite3.Error as exc:
+                except (sqlite3.Error, ValueError) as exc:
                     error = str(exc)
         else:
             new_description = request.form.get("description", "").strip()
@@ -936,20 +1188,33 @@ def sample_detail(sample_id):
     sample = sample_rows[0]
 
     _, result_rows = run_parameterized_select(
-        "SELECT tr.tID, tr.results, tr.actualResult "
-        "FROM TestResults tr WHERE tr.sID = ? ORDER BY tr.tID",
+        "SELECT tr.technicianID AS tID, a.name AS results, "
+        "COALESCE(tm.valueText, CAST(tm.valueNumeric AS TEXT)) AS actualResult, "
+        "a.defaultUnit AS resultUnit "
+        "FROM TestRun tr "
+        "JOIN TestMeasurement tm ON tm.testRunID = tr.testRunID "
+        "JOIN Analyte a ON a.analyteID = tm.analyteID "
+        "WHERE tr.sampleID = ? "
+        "ORDER BY tr.testRunID, tm.analyteID",
         (sample_id,),
     )
     tested = len(result_rows) > 0
 
+    _, analyte_options = run_select_query(
+        "SELECT analyteID, name, defaultUnit, dataType FROM Analyte ORDER BY analyteID"
+    )
+
     subsamples = get_subsample_hierarchy(sample_id)
+    subsample_tree = build_subsample_tree(subsamples)
 
     return render_template(
         "sample_detail.html",
         sample=sample,
         tested=tested,
         result_rows=result_rows,
+        analyte_options=analyte_options,
         subsamples=subsamples,
+        subsample_tree=subsample_tree,
         error=error,
         action_message=action_message,
     )
@@ -977,22 +1242,22 @@ def subsample_detail(sub_sample_id, sample_id):
                     error = str(exc)
         elif action == "add_result":
             technician_id = request.form.get("result_tid", "").strip()
-            result_description = request.form.get("result_description", "").strip()
+            analyte_id = request.form.get("result_analyte_id", "").strip()
             actual_result = request.form.get("result_value", "").strip()
 
-            if not technician_id or not result_description:
-                error = "result_tid and result_description are required."
+            if not technician_id or not analyte_id:
+                error = "result_tid and result_analyte_id are required."
             else:
                 try:
                     add_subsample_result(
                         current_subsample_id,
                         sample_id,
                         technician_id,
-                        result_description,
+                        analyte_id,
                         actual_result or None,
                     )
                     action_message = "SubSample result added successfully."
-                except sqlite3.Error as exc:
+                except (sqlite3.Error, ValueError) as exc:
                     error = str(exc)
         else:
             new_subsample_id = request.form.get("subSampleID", "").strip()
@@ -1036,20 +1301,26 @@ def subsample_detail(sub_sample_id, sample_id):
     )
 
     _, subsample_result_rows = run_parameterized_select(
-        "SELECT tID, description, actualResult "
+        "SELECT ssr.tID, ssr.description, ssr.actualResult, a.defaultUnit AS resultUnit "
         "FROM SubSampleResult "
-        "WHERE subSampleID = ? AND sampleID = ? "
-        "ORDER BY tID",
+        "ssr LEFT JOIN Analyte a ON a.name = ssr.description "
+        "WHERE ssr.subSampleID = ? AND ssr.sampleID = ? "
+        "ORDER BY ssr.tID",
         (current_subsample_id, sample_id),
     )
 
     subsample_tested = len(subsample_result_rows) > 0
+
+    _, analyte_options = run_select_query(
+        "SELECT analyteID, name, defaultUnit, dataType FROM Analyte ORDER BY analyteID"
+    )
 
     return render_template(
         "subsample_detail.html",
         subsample=subsample_rows[0],
         child_rows=child_rows,
         subsample_result_rows=subsample_result_rows,
+        analyte_options=analyte_options,
         subsample_tested=subsample_tested,
         error=error,
         action_message=action_message,
@@ -1070,10 +1341,13 @@ def search_by_page():
     value_a = request.args.get("a", "").strip()
     field_z = request.args.get("z", "").strip()
     value_b = request.args.get("b", "").strip()
+    quick_field = request.args.get("quick_field", "").strip()
+    quick_value = request.args.get("quick_value", "").strip()
     error = None
     columns = []
     results = []
     selected_fields = TABLE_FIELDS[selected_table]
+    field_value_options = get_field_value_options(selected_table)
 
     try:
         has_conditional_search = all([find_field, field_y, value_a, field_z, value_b])
@@ -1086,6 +1360,14 @@ def search_by_page():
                 field_z,
                 value_b,
             )
+        elif quick_field and quick_value:
+            if quick_field not in selected_fields:
+                raise ValueError("Invalid field selected for dropdown search.")
+            query = (
+                f"SELECT * FROM {TABLE_NAMES[selected_table]} "
+                f"WHERE CAST({quick_field} AS TEXT) = ?"
+            )
+            columns, results = run_parameterized_select(query, (quick_value,))
         else:
             columns, results = run_search_query(selected_table, search_text)
     except ValueError as exc:
@@ -1105,6 +1387,9 @@ def search_by_page():
         value_a=value_a,
         field_z=field_z,
         value_b=value_b,
+        quick_field=quick_field,
+        quick_value=quick_value,
+        field_value_options=field_value_options,
         columns=columns,
         results=results,
         error=error,
@@ -1114,99 +1399,100 @@ def search_by_page():
 @app.route("/sql-demo", methods=["GET", "POST"])
 def sql_demo_page():
     ensure_schema_updates()
-    selected_demo = request.values.get("demo", "join")
+
+    def request_value(key, default=""):
+        if request.method == "POST":
+            return request.form.get(key, request.args.get(key, default))
+        return request.args.get(key, default)
+
+    selected_demo = request_value("demo", "join")
     result_columns = []
     result_rows = []
     error = None
     action_message = None
 
     demo_queries = {
-        "join": (
-            "SELECT s.sampleID, s.description, c.email AS clientEmail, "
-            "t.firstName || ' ' || t.lastName AS technicianName "
-            "FROM Sample s "
-            "JOIN Client c ON s.cID = c.clientID "
-            "LEFT JOIN ConductsTestOn ct ON s.sampleID = ct.sampleID "
-            "LEFT JOIN Technician t ON ct.tID = t.technicianID "
-            "ORDER BY s.sampleID"
-        ),
         "division": (
-            "SELECT t.technicianID, t.firstName, t.lastName "
-            "FROM Technician t "
+            "SELECT c.clientID, c.email "
+            "FROM Client c "
             "WHERE NOT EXISTS ("
-            "SELECT s.sampleID FROM Sample s WHERE s.sID = ? "
+            "SELECT s.sampleID FROM Sample s WHERE s.cID = c.clientID "
             "EXCEPT "
-            "SELECT ct.sampleID FROM ConductsTestOn ct WHERE ct.tID = t.technicianID"
+            "SELECT tr.sampleID FROM TestRun tr "
+            "JOIN Sample s2 ON s2.sampleID = tr.sampleID "
+            "WHERE s2.cID = c.clientID"
             ")"
+            "ORDER BY c.clientID"
         ),
         "aggregation": (
-            "SELECT COUNT(*) AS totalSamples, "
-            "MIN(dateReceived) AS earliestDateReceived, "
-            "MAX(dateReceived) AS latestDateReceived "
-            "FROM Sample"
-        ),
-        "group_by": (
-            "SELECT c.clientID, c.email, COUNT(s.sampleID) AS sampleCount "
-            "FROM Client c "
-            "LEFT JOIN Sample s ON c.clientID = s.cID "
-            "GROUP BY c.clientID, c.email "
-            "ORDER BY sampleCount DESC, c.clientID"
+            "SELECT t.technicianID, t.firstName, t.lastName, "
+            "COUNT(tr.testRunID) AS totalTestRuns, "
+            "COUNT(DISTINCT tr.sampleID) AS uniqueSamplesTested, "
+            "CASE "
+            "WHEN totals.totalRuns = 0 THEN 0 "
+            "ELSE ROUND(100.0 * COUNT(tr.testRunID) / totals.totalRuns, 1) "
+            "END AS workloadPercent "
+            "FROM Technician t "
+            "LEFT JOIN TestRun tr ON tr.technicianID = t.technicianID "
+            "CROSS JOIN (SELECT COUNT(*) AS totalRuns FROM TestRun) totals "
+            "GROUP BY t.technicianID, t.firstName, t.lastName, totals.totalRuns "
+            "ORDER BY totalTestRuns DESC, uniqueSamplesTested DESC, t.technicianID"
         ),
     }
+    demo_queries_display = {
+        key: format_sql_for_display(query)
+        for key, query in demo_queries.items()
+    }
 
-    storage_id = request.values.get("storage_id", "101").strip()
-    technician_id = request.values.get("technician_id", "").strip()
-    new_phone = request.values.get("new_phone", "").strip()
-    cascade_client_id = request.values.get("cascade_client_id", "").strip()
+    storage_id = request_value("storage_id", "101").strip()
+    technician_id = request_value("technician_id", "").strip()
+    join_technician_id = request_value("join_technician_id", "").strip()
+    group_client_id = request_value("group_client_id", "").strip()
+    cascade_client_id = request_value("cascade_client_id", "").strip()
+
+    _, offboarding_clients = run_select_query(
+        "SELECT co.cID AS clientID, co.name AS displayName, 'company' AS clientType "
+        "FROM Company co "
+        "UNION ALL "
+        "SELECT i.cID AS clientID, i.firstName || ' ' || i.lastName AS displayName, 'individual' AS clientType "
+        "FROM Individual i "
+        "ORDER BY displayName"
+    )
+
+    _, technicians_for_update = run_select_query(
+        "SELECT technicianID, firstName || ' ' || lastName AS displayName "
+        "FROM Technician "
+        "ORDER BY technicianID"
+    )
 
     if request.method == "POST":
         try:
             if selected_demo in demo_queries:
-                if selected_demo == "division":
-                    if not storage_id:
-                        raise ValueError("storage_id is required for division query.")
-                    result_columns, result_rows = run_parameterized_select(
-                        demo_queries[selected_demo],
-                        (storage_id,),
-                    )
-                else:
-                    result_columns, result_rows = run_select_query(demo_queries[selected_demo])
+                result_columns, result_rows = run_select_query(demo_queries[selected_demo])
+
+            elif selected_demo == "join":
+                action_message = (
+                    "Sample ownership and assigned technician join is demonstrated on the Technician Detail page. "
+                    "Use the link helper in this demo section to open a technician."
+                )
+
+            elif selected_demo == "group_by":
+                action_message = (
+                    "Client workload summary by number of samples is shown on the Client Detail page. "
+                    "Use the link helper in this demo section to open a client."
+                )
 
             elif selected_demo == "update":
-                if not technician_id or not new_phone:
-                    raise ValueError("technician_id and new_phone are required for update.")
-                changed = run_update_technician_phone(technician_id, new_phone)
-                action_message = f"Updated {changed} technician row(s)."
-                result_columns, result_rows = run_parameterized_select(
-                    "SELECT technicianID, firstName, lastName, phone FROM Technician WHERE technicianID = ?",
-                    (technician_id,),
+                action_message = (
+                    "Technician contact correction now runs from the Technician Detail page. "
+                    "Use the link helper in this demo section to open a technician and update there."
                 )
 
             elif selected_demo == "cascade_delete":
-                if not cascade_client_id:
-                    raise ValueError("cascade_client_id is required for cascade delete.")
-                deleted_counts = run_cascade_delete_client(cascade_client_id)
                 action_message = (
-                    "Cascade delete summary for client "
-                    f"{cascade_client_id}: "
-                    f"Client={deleted_counts['client']}, "
-                    f"Company={deleted_counts['company']}, "
-                    f"Individual={deleted_counts['individual']}, "
-                    f"Sample={deleted_counts['sample']}, "
-                    f"SubSample={deleted_counts['subsample']}, "
-                    f"ConductsTestOn={deleted_counts['conducts_test_on']}, "
-                    f"TestResults={deleted_counts['test_results']}"
+                    "Client offboarding runs from the Client Detail page. "
+                    "Use the link in this demo section to open a client and run cascade delete there."
                 )
-                result_columns = ["table", "deleted_rows"]
-                result_rows = [
-                    {"table": "Client", "deleted_rows": deleted_counts["client"]},
-                    {"table": "Company", "deleted_rows": deleted_counts["company"]},
-                    {"table": "Individual", "deleted_rows": deleted_counts["individual"]},
-                    {"table": "Sample", "deleted_rows": deleted_counts["sample"]},
-                    {"table": "SubSample", "deleted_rows": deleted_counts["subsample"]},
-                    {"table": "ConductsTestOn", "deleted_rows": deleted_counts["conducts_test_on"]},
-                    {"table": "TestResults", "deleted_rows": deleted_counts["test_results"]},
-                ]
             else:
                 error = "Unknown demo type selected."
         except ValueError as exc:
@@ -1218,11 +1504,15 @@ def sql_demo_page():
         "sql_demo.html",
         selected_demo=selected_demo,
         demo_queries=demo_queries,
+        demo_queries_display=demo_queries_display,
         demo_titles=SQL_DEMO_TITLES,
         storage_id=storage_id,
+        join_technician_id=join_technician_id,
+        group_client_id=group_client_id,
         technician_id=technician_id,
-        new_phone=new_phone,
+        technicians_for_update=technicians_for_update,
         cascade_client_id=cascade_client_id,
+        offboarding_clients=offboarding_clients,
         result_columns=result_columns,
         result_rows=result_rows,
         error=error,
@@ -1322,7 +1612,7 @@ def samples_by_client(clientID):
     CASE
         WHEN EXISTS(
             SELECT *
-            FROM TestResults
+            FROM TestRun
             WHERE sampleID = ID
         ) THEN "true"
         ELSE "false"
