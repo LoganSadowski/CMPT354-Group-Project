@@ -91,6 +91,15 @@
             font-size: 14px;
         }
 
+        select {
+            padding: 10px;
+            border: 1px solid #cbd5e1;
+            border-radius: 10px;
+            box-sizing: border-box;
+            font-size: 14px;
+            background: #ffffff;
+        }
+
         button.run {
             background: #0f766e;
             color: #ffffff;
@@ -126,6 +135,14 @@
             margin-bottom: 16px;
             font-size: 14px;
             color: #374151;
+        }
+
+        .info {
+            background: #eff6ff;
+            color: #1e3a8a;
+            padding: 12px 14px;
+            border-radius: 10px;
+            margin-top: 10px;
         }
 
         .table-wrap {
@@ -176,55 +193,138 @@
 
             <p style="margin-top: 12px;"><strong>Selected demo:</strong> {{ demo_titles[selected_demo] }}</p>
 
+            {% if selected_demo == 'join' %}
+                <form method="get" class="row">
+                    <input type="hidden" name="demo" value="join">
+                    <div class="field">
+                        <label for="join_technician_id">Select technician to view assigned samples</label>
+                        <select id="join_technician_id" name="join_technician_id" required>
+                            <option value="">Choose a technician...</option>
+                            {% for technician in technicians_for_update %}
+                                <option value="{{ technician.technicianID }}" {% if join_technician_id == (technician.technicianID|string) %}selected{% endif %}>
+                                    {{ technician.technicianID }} - {{ technician.displayName }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <button class="run" type="submit">Open Link Helper</button>
+                </form>
+                {% if join_technician_id %}
+                    <div class="info">
+                        Join-style sample ownership view is available on the Technician Detail page.<br>
+                        <a href="/technician/{{ join_technician_id }}">Go to Technician {{ join_technician_id }} Sample Join View</a>
+                    </div>
+                {% endif %}
+            {% endif %}
+
             {% if selected_demo == 'division' %}
                 <form method="post" class="row">
                     <input type="hidden" name="demo" value="division">
-                    <div class="field">
-                        <label for="storage_id">storage_id (division parameter)</label>
-                        <input id="storage_id" type="text" name="storage_id" value="{{ storage_id }}" required>
-                    </div>
                     <button class="run" type="submit">Run Division Query</button>
                 </form>
             {% endif %}
 
+            {% if selected_demo == 'group_by' %}
+                <form method="get" class="row">
+                    <input type="hidden" name="demo" value="group_by">
+                    <div class="field">
+                        <label for="group_client_id">Select client to view sample count</label>
+                        <select id="group_client_id" name="group_client_id" required>
+                            <option value="">Choose a client...</option>
+                            {% for client in offboarding_clients %}
+                                <option value="{{ client.clientID }}" {% if group_client_id == (client.clientID|string) %}selected{% endif %}>
+                                    {{ client.clientID }} - {{ client.displayName }} ({{ client.clientType }})
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <button class="run" type="submit">Open Link Helper</button>
+                </form>
+                {% if group_client_id %}
+                    <div class="info">
+                        Group-by sample count is shown on the Client Detail page.<br>
+                        <a href="/client/{{ group_client_id }}">Go to Client {{ group_client_id }} Sample Count View</a>
+                    </div>
+                {% endif %}
+            {% endif %}
+
             {% if selected_demo == 'update' %}
-                <form method="post" class="row">
+                <form method="get" class="row">
                     <input type="hidden" name="demo" value="update">
                     <div class="field">
-                        <label for="technician_id">technician_id</label>
-                        <input id="technician_id" type="text" name="technician_id" value="{{ technician_id }}" required>
+                        <label for="technician_id">Select technician for contact correction</label>
+                        <select id="technician_id" name="technician_id" required>
+                            <option value="">Choose a technician...</option>
+                            {% for technician in technicians_for_update %}
+                                <option value="{{ technician.technicianID }}" {% if technician_id == (technician.technicianID|string) %}selected{% endif %}>
+                                    {{ technician.technicianID }} - {{ technician.displayName }}
+                                </option>
+                            {% endfor %}
+                        </select>
                     </div>
-                    <div class="field">
-                        <label for="new_phone">new_phone</label>
-                        <input id="new_phone" type="text" name="new_phone" value="{{ new_phone }}" required>
-                    </div>
-                    <button class="run" type="submit">Run Update</button>
+                    <button class="run" type="submit">Open Link Helper</button>
                 </form>
+                {% if technician_id %}
+                    <div class="info">
+                        Contact correction is now handled on the Technician Detail page.<br>
+                        <a href="/technician/{{ technician_id }}">Go to Technician {{ technician_id }} Contact Correction</a>
+                    </div>
+                {% endif %}
             {% endif %}
 
             {% if selected_demo == 'cascade_delete' %}
-                <form method="post" class="row">
+                <form method="get" class="row">
                     <input type="hidden" name="demo" value="cascade_delete">
                     <div class="field">
-                        <label for="cascade_client_id">client_id to delete</label>
-                        <input id="cascade_client_id" type="text" name="cascade_client_id" value="{{ cascade_client_id }}" required>
+                        <label for="cascade_client_id">Select client for offboarding</label>
+                        <select id="cascade_client_id" name="cascade_client_id" required>
+                            <option value="">Choose a client...</option>
+                            {% for client in offboarding_clients %}
+                                <option value="{{ client.clientID }}" {% if cascade_client_id == (client.clientID|string) %}selected{% endif %}>
+                                    {{ client.clientID }} - {{ client.displayName }} ({{ client.clientType }})
+                                </option>
+                            {% endfor %}
+                        </select>
                     </div>
-                    <button class="run" type="submit">Run Cascade Delete</button>
+                    <button class="run" type="submit">Open Link Helper</button>
                 </form>
+                {% if cascade_client_id %}
+                    <div class="info">
+                        Offboarding is now handled on the Client Detail page.<br>
+                        <a href="/client/{{ cascade_client_id }}">Go to Client {{ cascade_client_id }} Offboarding</a>
+                    </div>
+                {% endif %}
             {% endif %}
 
             {% if selected_demo in demo_queries %}
                 <h3 style="margin-top: 16px;">SQL Used</h3>
-                <pre>{{ demo_queries[selected_demo] }}</pre>
+                <pre>{{ demo_queries_display[selected_demo] }}</pre>
+            {% elif selected_demo == 'join' %}
+                <h3 style="margin-top: 16px;">SQL Used</h3>
+                <pre>-- Join view executed on Technician Detail page
+SELECT DISTINCT s.sampleID, s.description
+FROM TestRun tr
+JOIN Sample s ON s.sampleID = tr.sampleID
+WHERE tr.technicianID = ?
+ORDER BY s.sampleID;</pre>
+            {% elif selected_demo == 'group_by' %}
+                <h3 style="margin-top: 16px;">SQL Used</h3>
+                <pre>-- Group-by workload view executed on Client Detail page
+SELECT c.clientID, c.email, COUNT(s.sampleID) AS sampleCount
+FROM Client c
+LEFT JOIN Sample s ON c.clientID = s.cID
+WHERE c.clientID = ?
+GROUP BY c.clientID, c.email;</pre>
             {% elif selected_demo == 'update' %}
                 <h3 style="margin-top: 16px;">SQL Used</h3>
-                <pre>UPDATE Technician SET phone = ? WHERE technicianID = ?;
+                <pre>-- Contact correction SQL (executed from Technician Detail page)
+UPDATE Technician SET phone = ? WHERE technicianID = ?;
 SELECT technicianID, firstName, lastName, phone FROM Technician WHERE technicianID = ?;</pre>
             {% elif selected_demo == 'cascade_delete' %}
                 <h3 style="margin-top: 16px;">SQL Used</h3>
-                <pre>-- Manual cascade in transaction order
-DELETE FROM TestResults WHERE sID IN (...);
-DELETE FROM ConductsTestOn WHERE sampleID IN (...);
+                <pre>-- Offboarding SQL (executed from Client Detail page)
+DELETE FROM TestMeasurement WHERE testRunID IN (SELECT testRunID FROM TestRun WHERE sampleID IN (...));
+DELETE FROM TestRun WHERE sampleID IN (...);
 DELETE FROM SubSample WHERE sampleID IN (...);
 DELETE FROM Sample WHERE cID = ?;
 DELETE FROM Company WHERE cID = ?;
@@ -232,7 +332,7 @@ DELETE FROM Individual WHERE cID = ?;
 DELETE FROM Client WHERE clientID = ?;</pre>
             {% endif %}
 
-            <p style="margin-top: 14px;"><a href="/">Back to home</a> | <a href="/search">Back to search</a></p>
+            <p style="margin-top: 14px;"><a href="/">Back to main page</a> | <a href="/search">Back to search</a></p>
         </div>
 
         <div class="card">

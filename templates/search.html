@@ -73,6 +73,12 @@
             border-top: 1px solid #e5e7eb;
         }
 
+        .quick-search {
+            margin-top: 14px;
+            padding-top: 14px;
+            border-top: 1px solid #e5e7eb;
+        }
+
         .query-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -194,6 +200,30 @@
                 <button type="submit">Search</button>
             </form>
 
+            <form method="get" action="/search" class="quick-search">
+                <input type="hidden" name="category" value="{{ selected_table }}">
+                <strong>Dropdown Search</strong>
+                <div class="query-grid">
+                    <div>
+                        <label for="quick_field">Field</label>
+                        <select id="quick_field" name="quick_field" required>
+                            <option value="">Select field</option>
+                            {% for field in selected_fields %}
+                                <option value="{{ field }}" {% if quick_field == field %}selected{% endif %}>{{ field }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div>
+                        <label for="quick_value">Value</label>
+                        <select id="quick_value" name="quick_value" required>
+                            <option value="">Select value</option>
+                        </select>
+                    </div>
+                </div>
+                <button type="submit" style="margin-top: 12px;">Run Dropdown Search</button>
+            </form>
+
             <form method="get" action="/search" class="query-builder">
                 <input type="hidden" name="category" value="{{ selected_table }}">
                 <strong>Find X if Y includes A and Z includes B</strong>
@@ -241,7 +271,7 @@
                 <button type="submit" style="margin-top: 12px;">Run Conditional Search</button>
             </form>
 
-            <p style="margin-top: 12px;">Current category: <strong>{{ selected_label }}</strong> | <a class="small-link" href="/">Back to home</a></p>
+            <p style="margin-top: 12px;">Current category: <strong>{{ selected_label }}</strong> | <a class="small-link" href="/">Back to main page</a></p>
         </div>
 
         <div class="card">
@@ -279,5 +309,41 @@
             {% endif %}
         </div>
     </div>
+
+    <script>
+        const fieldOptions = {{ field_value_options | tojson }};
+        const quickField = document.getElementById('quick_field');
+        const quickValue = document.getElementById('quick_value');
+        const selectedQuickValue = {{ quick_value | tojson }};
+
+        function repopulateValues() {
+            const field = quickField.value;
+            const values = fieldOptions[field] || [];
+            quickValue.innerHTML = '';
+
+            const placeholder = document.createElement('option');
+            placeholder.value = '';
+            placeholder.textContent = 'Select value';
+            quickValue.appendChild(placeholder);
+
+            for (const value of values) {
+                const option = document.createElement('option');
+                option.value = value;
+                option.textContent = value;
+                if (value === selectedQuickValue) {
+                    option.selected = true;
+                }
+                quickValue.appendChild(option);
+            }
+        }
+
+        if (quickField && quickValue) {
+            repopulateValues();
+            quickField.addEventListener('change', () => {
+                repopulateValues();
+                quickValue.value = '';
+            });
+        }
+    </script>
 </body>
 </html>
