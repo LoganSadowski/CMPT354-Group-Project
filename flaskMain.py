@@ -85,6 +85,7 @@ SQL_DEMO_TITLES = {
     "group_by": "Client Workload Summary by Number of Samples (Group By)",
     "cascade_delete": "Client Offboarding with Cascading Data Cleanup (Delete + Cascade)",
     "update": "Technician Contact Correction (Update)",
+    "trigger_invalid_subsample": "Trigger Demo: Reject Invalid SubSample Parent (Insert)",
 }
 
 #Turn the results from the database into a dictionary
@@ -586,6 +587,24 @@ def run_cascade_delete_storage(storage_id):
 
         conn.commit()
         return deleted_counts
+    finally:
+        conn.close()
+
+
+def run_invalid_subsample_insert_demo():
+    ensure_schema_updates()
+    conn = get_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute(
+            "INSERT INTO SubSample (subSampleID, sampleID, parentSubSampleID) VALUES (?, ?, ?)",
+            ("TRIGGER_DEMO_INVALID", 1001, "TRIGGER_DEMO_INVALID"),
+        )
+        conn.commit()
+        return False, "Unexpectedly inserted invalid SubSample row."
+    except sqlite3.Error as exc:
+        conn.rollback()
+        return True, str(exc)
     finally:
         conn.close()
 
@@ -1531,6 +1550,19 @@ def sql_demo_page():
                     "Client offboarding runs from the Client Detail page. "
                     "Use the link in this demo section to open a client and run cascade delete there."
                 )
+
+            elif selected_demo == "trigger_invalid_subsample":
+                success, details = run_invalid_subsample_insert_demo()
+                if success:
+                    action_message = (
+                        "Expected trigger behavior confirmed: invalid SubSample insert was blocked. "
+                        f"Database message: {details}"
+                    )
+                else:
+                    error = (
+                        "Trigger demo failed because invalid SubSample insert was not blocked. "
+                        f"Details: {details}"
+                    )
             else:
                 error = "Unknown demo type selected."
         except ValueError as exc:
