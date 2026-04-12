@@ -55,9 +55,9 @@ chmod +x reinit.sh
 ./reinit.sh
 ```
 
-### On Windows (Git Bash or WSL):
+### On Windows:
 ```bash
-bash reinit.sh
+reinit.sh
 ```
 
 ---
