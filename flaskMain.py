@@ -201,6 +201,44 @@ def ensure_schema_updates():
             ")"
         )
 
+        cursor.execute(
+            "CREATE TRIGGER IF NOT EXISTS trg_subsample_parent_check_insert "
+            "BEFORE INSERT ON SubSample "
+            "FOR EACH ROW "
+            "WHEN NEW.parentSubSampleID IS NOT NULL "
+            "BEGIN "
+            "SELECT CASE "
+            "WHEN NEW.parentSubSampleID = NEW.subSampleID "
+            "THEN RAISE(ABORT, 'SubSample cannot be its own parent') "
+            "WHEN NOT EXISTS ("
+            "SELECT 1 FROM SubSample s "
+            "WHERE s.subSampleID = NEW.parentSubSampleID "
+            "AND s.sampleID = NEW.sampleID"
+            ") "
+            "THEN RAISE(ABORT, 'Parent SubSample must exist in same Sample') "
+            "END; "
+            "END"
+        )
+
+        cursor.execute(
+            "CREATE TRIGGER IF NOT EXISTS trg_subsample_parent_check_update "
+            "BEFORE UPDATE OF parentSubSampleID, subSampleID, sampleID ON SubSample "
+            "FOR EACH ROW "
+            "WHEN NEW.parentSubSampleID IS NOT NULL "
+            "BEGIN "
+            "SELECT CASE "
+            "WHEN NEW.parentSubSampleID = NEW.subSampleID "
+            "THEN RAISE(ABORT, 'SubSample cannot be its own parent') "
+            "WHEN NOT EXISTS ("
+            "SELECT 1 FROM SubSample s "
+            "WHERE s.subSampleID = NEW.parentSubSampleID "
+            "AND s.sampleID = NEW.sampleID"
+            ") "
+            "THEN RAISE(ABORT, 'Parent SubSample must exist in same Sample') "
+            "END; "
+            "END"
+        )
+
         conn.commit()
         SCHEMA_INITIALIZED = True
     finally:
