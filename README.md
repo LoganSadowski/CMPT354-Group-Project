@@ -24,11 +24,13 @@ No other external dependencies. `sqlite3` is included in Python's standard libra
 
 ## Step-by-Step Run Guide
 
-### Step 1: Clone the Repository
+### Step 1: Clone the Repository + Go to Folder
 ```bash
-
+git clone https://github.com/LoganSadowski/CMPT354-Group-Project.git
 cd CMPT354-Group-Project
 ```
+
+
 
 ### Step 2: Install Dependencies
 ```bash
