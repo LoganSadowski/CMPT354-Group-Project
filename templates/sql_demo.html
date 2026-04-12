@@ -189,6 +189,7 @@
                 <button class="demo-btn {% if selected_demo == 'group_by' %}active{% endif %}" name="demo" value="group_by">{{ demo_titles['group_by'] }}</button>
                 <button class="demo-btn {% if selected_demo == 'cascade_delete' %}active{% endif %}" name="demo" value="cascade_delete">{{ demo_titles['cascade_delete'] }}</button>
                 <button class="demo-btn {% if selected_demo == 'update' %}active{% endif %}" name="demo" value="update">{{ demo_titles['update'] }}</button>
+                <button class="demo-btn {% if selected_demo == 'trigger_invalid_subsample' %}active{% endif %}" name="demo" value="trigger_invalid_subsample">{{ demo_titles['trigger_invalid_subsample'] }}</button>
             </form>
 
             <p style="margin-top: 12px;"><strong>Selected demo:</strong> {{ demo_titles[selected_demo] }}</p>
@@ -296,6 +297,17 @@
                 {% endif %}
             {% endif %}
 
+            {% if selected_demo == 'trigger_invalid_subsample' %}
+                <form method="post" class="row">
+                    <input type="hidden" name="demo" value="trigger_invalid_subsample">
+                    <button class="run" type="submit">Run Invalid SubSample Insert Trigger Test</button>
+                </form>
+                <div class="info">
+                    This test intentionally inserts a SubSample with <strong>parentSubSampleID = subSampleID</strong>.
+                    The insert should fail due to the trigger.
+                </div>
+            {% endif %}
+
             {% if selected_demo in demo_queries %}
                 <h3 style="margin-top: 16px;">SQL Used</h3>
                 <pre>{{ demo_queries_display[selected_demo] }}</pre>
@@ -330,6 +342,14 @@ DELETE FROM Sample WHERE cID = ?;
 DELETE FROM Company WHERE cID = ?;
 DELETE FROM Individual WHERE cID = ?;
 DELETE FROM Client WHERE clientID = ?;</pre>
+            {% elif selected_demo == 'trigger_invalid_subsample' %}
+                <h3 style="margin-top: 16px;">SQL Used</h3>
+                <pre>-- Trigger test: intentionally invalid insert (self-parent)
+INSERT INTO SubSample (subSampleID, sampleID, parentSubSampleID)
+VALUES ('TRIGGER_DEMO_INVALID', 1001, 'TRIGGER_DEMO_INVALID');
+
+-- Expected result:
+-- Error: "SubSample cannot be its own parent"</pre>
             {% endif %}
 
             <p style="margin-top: 14px;"><a href="/">Back to main page</a> | <a href="/search">Back to search</a></p>
