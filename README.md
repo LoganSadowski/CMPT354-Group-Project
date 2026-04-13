@@ -58,9 +58,9 @@ chmod +x reinit.sh
 ```
 
 ### On Windows:
-```bash
-reinit.sh
-```
+Right-click inside the folder containing reinit.sh and select "Git Bash Here". 
+
+Type `sh filename.sh` or `./filename.sh` and press Enter.
 
 ---
 
